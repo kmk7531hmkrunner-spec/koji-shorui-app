@@ -68,9 +68,70 @@ async function renderList() {
 }
 
 function bindBotEvents() {
-  fabBot.addEventListener('click', () => {
-    botContainer.classList.toggle('hidden');
-  });
+  let isDragging = false;
+  let startX, startY;
+  let startLeft, startTop;
+
+  fabBot.addEventListener('mousedown', dragStart);
+  fabBot.addEventListener('touchstart', dragStart, { passive: false });
+
+  function dragStart(e) {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    isDragging = false;
+    startX = clientX;
+    startY = clientY;
+
+    const rect = fabBot.getBoundingClientRect();
+    startLeft = rect.left;
+    startTop = rect.top;
+
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('touchmove', dragMove, { passive: false });
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchend', dragEnd);
+  }
+
+  function dragMove(e) {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      isDragging = true;
+    }
+
+    if (isDragging) {
+      if (e.cancelable) e.preventDefault();
+      
+      let newLeft = startLeft + dx;
+      let newTop = startTop + dy;
+
+      // Bound checks
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - fabBot.offsetWidth));
+      newTop = Math.max(0, Math.min(newTop, window.innerHeight - fabBot.offsetHeight));
+
+      fabBot.style.left = newLeft + 'px';
+      fabBot.style.top = newTop + 'px';
+      fabBot.style.bottom = 'auto'; // Disable fixed bottom
+      fabBot.style.right = 'auto';  // Disable fixed right
+    }
+  }
+
+  function dragEnd() {
+    document.removeEventListener('mousemove', dragMove);
+    document.removeEventListener('touchmove', dragMove);
+    document.removeEventListener('mouseup', dragEnd);
+    document.removeEventListener('touchend', dragEnd);
+
+    if (!isDragging) {
+      // It was a click, not a drag
+      botContainer.classList.toggle('hidden');
+    }
+  }
 
   btnCloseBot.addEventListener('click', () => {
     botContainer.classList.add('hidden');

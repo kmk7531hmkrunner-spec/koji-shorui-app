@@ -144,21 +144,31 @@ body {
 
 /* Floating Action Button */
 .fab-secondary {
-  bottom: calc(7rem + var(--safe-area-bottom));
+  bottom: calc(7.5rem + var(--safe-area-bottom));
   right: 1.5rem;
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-  background-color: white;
+  width: 54px;
+  height: 54px;
+  border-radius: 27px;
+  background-color: var(--bg-card);
   color: var(--accent-gold);
   border: 1px solid var(--accent-gold);
-  font-size: 18px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   position: fixed;
-  z-index: 800;
+  z-index: 1000;
+  cursor: grab;
+  touch-action: none; /* Important for dragging */
+}
+
+.fab-secondary:active {
+  cursor: grabbing;
+}
+
+.fab-secondary svg {
+  width: 28px;
+  height: 28px;
 }
 
 /* Chatbot UI */
