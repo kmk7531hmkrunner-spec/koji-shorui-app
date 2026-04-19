@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>工事書類管理アプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <button class="btn btn-outline" id="btn-back" style="display: none;">◀ 戻る</button>
+            <h1 id="page-title">プロジェクト一覧</h1>
+            <div id="header-actions">
+                <button class="btn btn-primary" id="btn-bulk-pdf" style="display: none;">まとめてPDF</button>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs" id="tabs">
+            <button class="tab active" data-tab="draft">下書き</button>
+            <button class="tab" data-tab="sent">完了済み</button>
+        </div>
+
+        <!-- Main Content (List) -->
+        <main class="project-list" id="project-list-view">
+            <div id="project-list">
+                <!-- Project cards will be rendered here -->
+            </div>
+        </main>
+
+        <!-- Main Content (Form) -->
+        <main class="form-view" id="form-view" style="display: none;">
+            <!-- Form will be rendered here -->
+        </main>
+
+        <!-- Floating Action Button -->
+        <button class="fab" id="fab-plus" title="新規作成">新規作成</button>
+
+        <!-- Chatbot -->
+        <div id="bot-container" class="bot-container hidden">
+            <div class="bot-header">
+                <span>ガイドボット</span>
+                <button id="btn-close-bot">✕</button>
+            </div>
+            <div id="bot-messages" class="bot-messages">
+                <div class="message bot">こんにちは！当社の書類作成ルールやアプリの使い方についてお答えします。知りたいことを入力するか、下のボタンを選んでください。</div>
+            </div>
+            <div class="bot-input-area">
+                <input type="text" id="bot-input" placeholder="質問を入力...">
+                <button id="btn-send-bot">送信</button>
+            </div>
+        </div>
+        <button id="fab-bot" class="fab fab-secondary" title="ヘルプ">？</button>
+
+        <!-- Modal for New Project Type Selection (Optional UI) -->
+        <div id="type-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>作成する書類を選択</h2>
+                <button class="btn btn-primary" id="btn-new-kanryo">完了報告書 / 丸産</button>
+                <button class="btn btn-outline" id="btn-new-geppo">月報</button>
+                <button class="btn btn-danger" id="btn-close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>
