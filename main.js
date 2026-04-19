@@ -2,6 +2,7 @@ import { getAllProjects, saveProject, deleteProject, generateDraftName, generate
 import { CompanyRules } from './src/rules.js';
 import { resizeImage, adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf } from './src/pdf-engine.js';
+import { getPdfConfig, savePdfConfig } from './src/config-manager.js';
 
 // DOM Elements
 const projectListView = document.getElementById('project-list-view');
@@ -20,7 +21,6 @@ const btnCloseBot = document.getElementById('btn-close-bot');
 const botMessages = document.getElementById('bot-messages');
 const botInput = document.getElementById('bot-input');
 const btnSendBot = document.getElementById('btn-send-bot');
-
 let currentTab = 'draft';
 let currentProject = null;
 
@@ -127,8 +127,8 @@ function bindBotEvents() {
     document.removeEventListener('mouseup', dragEnd);
     document.removeEventListener('touchend', dragEnd);
 
+    // If movement was minimal (less than 10px), treat as a click
     if (!isDragging) {
-      // It was a click, not a drag
       botContainer.classList.toggle('hidden');
     }
   }
@@ -144,7 +144,15 @@ function bindBotEvents() {
 
   // Bulk PDF
   btnBulkPdf.addEventListener('click', handleBulkPdf);
+
+
+  // Toggle Controls
+  // Bulk PDF
+  btnBulkPdf.addEventListener('click', handleBulkPdf);
+
+  // Settings Link (Handled by <a> in HTML, but we can add specific logic if needed)
 }
+
 
 async function handleBulkPdf() {
   const selectedIds = Array.from(document.querySelectorAll('.bulk-select:checked')).map(cb => cb.value);
@@ -156,25 +164,37 @@ async function handleBulkPdf() {
   const projects = await getAllProjects();
   const selectedProjects = projects.filter(p => selectedIds.includes(p.id));
 
+  const config = await getPdfConfig();
+
   // Load unique templates needed
   const templates = {};
   const types = ['kanryo', 'marusan', 'geppo'];
-  const typeMap = { 'kanryo': '/images/kanryo_report.jpg.jpg', 'marusan': '/images/marusan_report.jpg.jpg', 'geppo': '/images/geppo.jpg.jpg' };
+  const typeMap = { 'kanryo': '/images/kanrryoutemp.jpg?v=1.2', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
   
   try {
-    const doc = await generateBulkPdf(selectedProjects, typeMap);
+    const doc = await generateBulkPdf(selectedProjects, typeMap, config);
     
     const filename = `一括生成_${new Date().toISOString().split('T')[0]}`;
+
+    // Update status for all selected projects BEFORE sharing
+    for (const p of selectedProjects) {
+        p.status = 'sent';
+        await saveProject(p);
+    }
     
     if (navigator.share) {
         const pdfBlob = doc.output('blob');
         const file = new File([pdfBlob], `${filename}.pdf`, { type: 'application/pdf' });
-        await navigator.share({ files: [file], title: filename });
+        try {
+            await navigator.share({ files: [file], title: filename });
+        } catch (shareErr) {
+            console.log('Sharing cancelled or failed', shareErr);
+        }
     } else {
         doc.save(`${filename}.pdf`);
     }
 
-    alert(`${selectedIds.length}件のPDFを生成しました`);
+    alert(`${selectedIds.length}件のPDFを一括生成し、完了済みに移動しました`);
     renderList();
   } catch (err) {
     console.error(err);
@@ -233,6 +253,11 @@ function bindEvents() {
     showForm('kanryo');
   });
 
+  document.getElementById('btn-new-marusan').addEventListener('click', () => {
+    typeModal.style.display = 'none';
+    showForm('marusan');
+  });
+
   document.getElementById('btn-new-geppo').addEventListener('click', () => {
     typeModal.style.display = 'none';
     showForm('geppo');
@@ -269,6 +294,8 @@ function bindEvents() {
 }
 
 function showForm(type, project = null) {
+  const isHistory = project && project.status === 'sent';
+  
   currentProject = project || {
     type,
     status: 'draft',
@@ -283,7 +310,12 @@ function showForm(type, project = null) {
   formView.style.display = 'block';
   fabPlus.style.display = 'none';
   btnBack.style.display = 'block';
-  pageTitle.textContent = type === 'kanryo' ? '完了報告書 作成' : '月報 作成';
+  
+  if (isHistory) {
+      pageTitle.textContent = '完了報告書 再編集';
+  } else {
+      pageTitle.textContent = type === 'kanryo' ? '完了報告書 作成' : (type === 'marusan' ? '丸産技研報告書 作成' : '月報 作成');
+  }
 
   renderForm();
 }
@@ -293,32 +325,31 @@ function renderForm() {
   
   formView.innerHTML = `
     <div class="form-container">
-      <div class="form-group">
-        <label class="label">日付</label>
-        <input type="date" id="form-date" value="${currentProject.date}">
-      </div>
-      <div class="form-group">
-        <label class="label">会社名（現場名）</label>
-        <input type="text" id="form-company" value="${currentProject.companyName}" placeholder="例：〇〇様邸">
-      </div>
-      <div class="form-group">
-        <label class="label">作業者名</label>
-        <input type="text" id="form-worker" value="${currentProject.workerName}" placeholder="氏名を入力">
-      </div>
-      
-      <hr style="margin: 2rem 0; border: 0; border-top: 1px solid var(--border-color);">
-      
       <div id="dynamic-form-fields">
-        ${isGeppo ? renderGeppoFields() : renderKanryoFields()}
+        ${currentProject.type === 'geppo' ? renderGeppoFields() : (currentProject.type === 'marusan' ? renderMarusanFields() : renderKanryoFields())}
       </div>
 
       <div class="form-actions-bottom">
-        <button class="btn btn-outline" id="btn-set-position">貼り付け位置を指定</button>
+        <button class="btn btn-outline" id="btn-preview-doc">プレビュー反映を確認</button>
         <button class="btn btn-primary" id="btn-save-draft">下書き保存</button>
       </div>
     </div>
 
-    <!-- Position Tool Overlay -->
+    <!-- Document Preview Overlay -->
+    <div id="document-preview-overlay" class="modal hidden" style="z-index: 2000;">
+        <div class="modal-content" style="width: 95%; max-width: 800px; height: 90vh; display: flex; flex-direction: column; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0;">出力プレビュー</h3>
+                <button class="btn btn-danger" id="btn-close-preview" style="padding: 5px 15px;">閉じる</button>
+            </div>
+            <div id="preview-canvas-container" style="flex: 1; overflow: auto; background: #555; display: flex; justify-content: center; align-items: flex-start; border-radius: 8px;">
+                <!-- Canvas will be injected here -->
+            </div>
+            <p style="font-size: 0.7rem; color: #666; margin-top: 5px;">※ 実際のPDF出力イメージを確認できます</p>
+        </div>
+    </div>
+
+    <!-- Position Tool Overlay (Hidden/Legacy) -->
     <div id="position-overlay" class="modal hidden">
         <div class="position-tool-content">
             <p style="margin: 0; padding: 10px; background: rgba(0,0,0,0.7); font-size: 0.8rem;">
@@ -343,50 +374,88 @@ function renderForm() {
   }
 
   document.getElementById('btn-save-draft').addEventListener('click', handleSaveDraft);
-  document.getElementById('btn-set-position').addEventListener('click', showPositionTool);
-}
+  document.getElementById('btn-preview-doc').addEventListener('click', handleShowPreview);
 
-function showPositionTool() {
-  const overlay = document.getElementById('position-overlay');
-  const templateImg = document.getElementById('position-template');
-  const marker = document.getElementById('position-marker');
-  const container = document.getElementById('position-canvas-container');
-
-  // Set template image
-  if (currentProject.type === 'kanryo') templateImg.src = '/images/kanryo_report.jpg.jpg';
-  else if (currentProject.type === 'marusan') templateImg.src = '/images/marusan_report.jpg.jpg';
-  else templateImg.src = '/images/geppo.jpg.jpg';
-
-  overlay.classList.remove('hidden');
-
-  // Initialize marker if exists
-  const pos = currentProject.receiptPosition;
-  if (pos) {
-      marker.style.display = 'block';
-      marker.style.left = pos.x + '%';
-      marker.style.top = pos.y + '%';
-      marker.style.width = (pos.scale * 15) + '%'; 
-      marker.style.height = (pos.scale * 10) + '%';
+  // Attach Chip Listeners
+  const chipGroup = document.getElementById('support-chip-group');
+  if (chipGroup) {
+      if (!Array.isArray(currentProject.formData.supportName)) {
+          currentProject.formData.supportName = [];
+      }
+      chipGroup.addEventListener('click', (e) => {
+          const btn = e.target.closest('.chip-btn');
+          if (!btn) return;
+          const name = btn.dataset.name;
+          const index = currentProject.formData.supportName.indexOf(name);
+          if (index > -1) {
+              btn.classList.remove('active');
+              currentProject.formData.supportName.splice(index, 1);
+          } else {
+              btn.classList.add('active');
+              currentProject.formData.supportName.push(name);
+          }
+      });
   }
 
-  // Handle Tap to position
-  templateImg.onclick = (e) => {
-    const rect = templateImg.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+  // Ensure current data is synced
+  syncDataToProject();
+}
 
-    marker.style.display = 'block';
-    marker.style.left = x + '%';
-    marker.style.top = y + '%';
-    marker.style.width = '20%'; // Default size
-    marker.style.height = '15%';
+async function handleShowPreview() {
+    const overlay = document.getElementById('document-preview-overlay');
+    const container = document.getElementById('preview-canvas-container');
+    const closeBtn = document.getElementById('btn-close-preview');
+    
+    syncDataToProject();
+    
+    container.innerHTML = '<div style="color:white; padding: 20px;">生成中...</div>';
+    overlay.classList.remove('hidden');
+    
+    try {
+        let bgUrl = '';
+        if (currentProject.type === 'kanryo') bgUrl = '/images/kanrryoutemp.jpg?v=1.2';
+        else if (currentProject.type === 'marusan') bgUrl = '/images/marusan_report.jpg';
+        else bgUrl = '/images/geppo.jpg';
+        
+        const config = await getPdfConfig();
+        const canvas = await drawProjectToCanvas(currentProject, bgUrl, config);
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+        canvas.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+        
+        container.innerHTML = '';
+        container.appendChild(canvas);
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = '<div style="color:red; padding: 20px;">プレビュー生成に失敗しました</div>';
+    }
+    
+    closeBtn.onclick = () => overlay.classList.add('hidden');
+}
 
-    currentProject.receiptPosition = { x, y, scale: 0.5 };
-  };
-
-  document.getElementById('btn-confirm-position').onclick = () => {
-    overlay.classList.add('hidden');
-  };
+function syncDataToProject() {
+    if (!currentProject) return;
+    const dateEl = document.getElementById('form-date');
+    const workerEl = document.getElementById('form-worker');
+    if (dateEl) currentProject.date = dateEl.value;
+    if (workerEl) currentProject.workerName = workerEl.value;
+    
+    if (currentProject.type === 'geppo') {
+        const summaryEl = document.getElementById('field-summary');
+        if (summaryEl) currentProject.formData.summary = summaryEl.value;
+    } else {
+        const fields = [
+          'officeName', 'supervisorName', 'orderNumber', 'address',
+          'visitCount', 'completionStatus',
+          'parkingFee', 'highwayFee', 'materialFee', 'totalAmount', 'taxAmount',
+          'content', 'dailyReport', 'siteName', 'startTime', 'endTime',
+          'worker1', 'worker2', 'worker3', 'worker4', 'worker5', 'worker6'
+        ];
+        fields.forEach(fid => {
+          const el = document.getElementById(`field-${fid}`);
+          if (el) currentProject.formData[fid] = el.value;
+        });
+    }
 }
 
 async function handleReceiptUpload(e) {
@@ -416,15 +485,151 @@ async function handleReceiptUpload(e) {
 }
 
 function renderKanryoFields() {
+  const fd = currentProject.formData || {};
   return `
     <div class="form-group">
-      <label class="label">工事内容</label>
-      <textarea id="field-content" rows="3">${currentProject.formData.content || ''}</textarea>
+      <label class="label">作業者名</label>
+      <input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="氏名を入力">
     </div>
     <div class="form-group">
-      <label class="label">領収書添付</label>
+      <label class="label">事業者名</label>
+      <input type="text" id="field-officeName" value="${fd.officeName || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">監督名</label>
+      <input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">回数選択</label>
+      <select id="field-visitCount">
+        <option value="">選択なし</option>
+        <option value="1" ${fd.visitCount === '1' ? 'selected' : ''}>1回目</option>
+        <option value="2" ${fd.visitCount === '2' ? 'selected' : ''}>2回目</option>
+        <option value="3" ${fd.visitCount === '3' ? 'selected' : ''}>3回目</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="label">完了・未完選択</label>
+      <select id="field-completionStatus">
+        <option value="">選択なし</option>
+        <option value="done" ${fd.completionStatus === 'done' ? 'selected' : ''}>完了</option>
+        <option value="notYet" ${fd.completionStatus === 'notYet' ? 'selected' : ''}>未</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="label">応援選択（タップした順に並びます）</label>
+      <div id="support-chip-group" class="chip-group">
+        ${['湧', '菊', '須', '田', '大', '下', '巻', '木', 'タン', '富'].map(name => {
+          const isActive = (fd.supportName || []).includes(name);
+          return `<button type="button" class="chip-btn ${isActive ? 'active' : ''}" data-name="${name}">${name}</button>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="label">駐車場代</label>
+      <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}">
+    </div>
+    <div class="form-group" style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(var(--accent-gold-rgb), 0.2);">
+      <label class="label" style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">📸</span> 領収書の撮影・選択 (白黒加工されます)
+      </label>
+      <input type="file" id="field-receipt" accept="image/*" capture="environment" style="font-size: 0.8rem;">
+      <div id="receipt-preview" style="margin-top: 10px; display: flex; justify-content: center;">
+        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}" style="width: 100%; max-width: 300px; border-radius: 8px; border: 2px solid var(--accent-gold); box-shadow: var(--shadow-sm);">` : '<div style="font-size: 0.7rem; color: #999; padding: 20px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; width: 100%;">ここに加工後のプレビューが表示されます</div>'}
+      </div>
+    </div>
+    <div class="form-group">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label class="label">高速代</label>
+        <a href="https://www.driveplaza.com/dp/SearchTop" target="_blank" class="btn btn-outline" style="font-size: 0.7rem; padding: 2px 8px;">高速代検索</a>
+      </div>
+      <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">材料代</label>
+      <input type="number" id="field-materialFee" value="${fd.materialFee || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">日付</label>
+      <input type="date" id="form-date" value="${currentProject.date || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">注文番号</label>
+      <input type="text" id="field-orderNumber" value="${fd.orderNumber || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">現場名</label>
+      <input type="text" id="field-siteName" value="${fd.siteName || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">住所</label>
+      <input type="text" id="field-address" value="${fd.address || ''}">
+    </div>
+    <div class="form-group">
+        <label class="label">工事内容 (10行まで)</label>
+        <textarea id="field-content" rows="6" placeholder="自動改行されます">${fd.content || ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="label">日報 (4行まで)</label>
+      <textarea id="field-dailyReport" rows="3" placeholder="現場の状況など">${fd.dailyReport || ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="label">合計額</label>
+      <input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">消費税額</label>
+      <input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}">
+    </div>
+  `;
+}
+
+function renderMarusanFields() {
+  const fd = currentProject.formData || {};
+  return `
+    <div class="form-group">
+      <label class="label">監督名</label>
+      <input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">日にち</label>
+      <input type="date" id="form-date" value="${currentProject.date || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">現場名</label>
+      <input type="text" id="field-siteName" value="${fd.siteName || ''}">
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div class="form-group">
+        <label class="label">開始時間</label>
+        <input type="time" id="field-startTime" value="${fd.startTime || ''}">
+      </div>
+      <div class="form-group">
+        <label class="label">終了時間</label>
+        <input type="time" id="field-endTime" value="${fd.endTime || ''}">
+      </div>
+    </div>
+    <div class="form-group">
+        <label class="label">作業内容 (3行まで)</label>
+        <textarea id="field-content" rows="3" placeholder="3行程度で入力">${fd.content || ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="label">作業者名</label>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <input type="text" id="field-worker1" placeholder="作業者1" value="${fd.worker1 || ''}">
+        <input type="text" id="field-worker2" placeholder="作業者2" value="${fd.worker2 || ''}">
+        <input type="text" id="field-worker3" placeholder="作業者3" value="${fd.worker3 || ''}">
+        <input type="text" id="field-worker4" placeholder="作業者4" value="${fd.worker4 || ''}">
+        <input type="text" id="field-worker5" placeholder="作業者5" value="${fd.worker5 || ''}">
+        <input type="text" id="field-worker6" placeholder="作業者6" value="${fd.worker6 || ''}">
+      </div>
+    </div>
+    <div class="form-group" style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(var(--accent-gold-rgb), 0.2);">
+      <label class="label">📸 領収書の撮影・選択</label>
       <input type="file" id="field-receipt" accept="image/*" capture="environment">
-      <div id="receipt-preview" style="margin-top: 10px;"></div>
+      <div id="receipt-preview" style="margin-top: 10px; display: flex; justify-content: center;">
+        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}" style="width: 100%; max-width: 300px; border-radius: 8px; border: 2px solid var(--accent-gold);">` : ''}
+      </div>
     </div>
   `;
 }
@@ -432,26 +637,44 @@ function renderKanryoFields() {
 function renderGeppoFields() {
   return `
     <div class="form-group">
+      <label class="label">日付</label>
+      <input type="date" id="form-date" value="${currentProject.date || ''}">
+    </div>
+    <div class="form-group">
+      <label class="label">氏名</label>
+      <input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="氏名を入力">
+    </div>
+    <div class="form-group">
         <label class="label">今月の概況</label>
         <textarea id="field-summary" rows="5">${currentProject.formData.summary || ''}</textarea>
     </div>
   `;
 }
 
-async function handleSaveDraft() {
-  const date = document.getElementById('form-date').value;
-  const company = document.getElementById('form-company').value;
-  const worker = document.getElementById('form-worker').value;
 
-  if (!date || !company) {
-    alert('日付と会社名を入力してください');
+
+async function handleSaveDraft() {
+  const dateEl = document.getElementById('form-date');
+  const workerEl = document.getElementById('form-worker');
+
+  const date = dateEl ? dateEl.value : '';
+  let worker = workerEl ? workerEl.value : '';
+
+  // For Marusan, if single worker field is missing, use worker1 as the representative name
+  if (!worker && currentProject.type === 'marusan') {
+    const w1 = document.getElementById('field-worker1');
+    if (w1) worker = w1.value;
+  }
+
+  if (!date) {
+    alert('日付を入力してください');
     return;
   }
 
-  const displayTitle = generateDraftName(date, company);
+  const displayTitle = generateDraftName(date, worker);
   
   currentProject.date = date;
-  currentProject.companyName = company;
+  currentProject.companyName = '';
   currentProject.workerName = worker;
   currentProject.displayTitle = displayTitle;
 
@@ -459,11 +682,24 @@ async function handleSaveDraft() {
   if (currentProject.type === 'geppo') {
     currentProject.formData.summary = document.getElementById('field-summary').value;
   } else {
-    currentProject.formData.content = document.getElementById('field-content').value;
+    const fields = [
+      'officeName', 'supervisorName', 'orderNumber', 'address',
+      'visitCount', 'completionStatus',
+      'parkingFee', 'highwayFee', 'materialFee', 'totalAmount', 'taxAmount',
+      'content', 'dailyReport', 'siteName', 'startTime', 'endTime',
+      'worker1', 'worker2', 'worker3', 'worker4', 'worker5', 'worker6'
+    ];
+    fields.forEach(fid => {
+      const el = document.getElementById(`field-${fid}`);
+      if (el) currentProject.formData[fid] = el.value;
+    });
+    // supportName is handled via chips directly
   }
 
   await saveProject(currentProject);
   alert('下書きを保存しました');
+  currentProject.status = 'draft'; // Ensure status is draft for subsequent saves
+  currentTab = 'draft';
   renderList();
 }
 
@@ -480,6 +716,8 @@ async function generatePdf(id) {
   const p = projects.find(item => item.id === id);
   if (!p) return;
 
+  const config = await getPdfConfig();
+  
   const typeMap = {
     'kanryo': '完了報告書',
     'marusan': '丸産技研報告書',
@@ -490,12 +728,12 @@ async function generatePdf(id) {
   
   // Load background
   let bgUrl = '';
-  if (p.type === 'kanryo') bgUrl = '/images/kanryo_report.jpg.jpg';
-  else if (p.type === 'marusan') bgUrl = '/images/marusan_report.jpg.jpg';
-  else bgUrl = '/images/geppo.jpg.jpg';
+  if (p.type === 'kanryo') bgUrl = '/images/kanrryoutemp.jpg?v=1.2';
+  else if (p.type === 'marusan') bgUrl = '/images/marusan_report.jpg';
+  else bgUrl = '/images/geppo.jpg';
 
   try {
-    const doc = await generateSinglePdf(p, bgUrl);
+    const doc = await generateSinglePdf(p, bgUrl, config);
     
     // PDF generated successfully. Move to 'sent'
     p.status = 'sent';

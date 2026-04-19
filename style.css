@@ -17,7 +17,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-primary);
   line-height: 1.6;
@@ -323,6 +323,25 @@ input:focus, select:focus, textarea:focus {
   gap: 1rem;
 }
 
+/* Document Preview Specific */
+#document-preview-overlay .modal-content {
+    background-color: #333;
+    color: white;
+    border: 1px solid #444;
+}
+
+#preview-canvas-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+#preview-canvas-container::-webkit-scrollbar-track {
+    background: #444;
+}
+#preview-canvas-container::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 4px;
+}
+
 .modal-content h2 {
   margin-top: 0;
   font-size: 1.25rem;
@@ -384,3 +403,195 @@ input:focus, select:focus, textarea:focus {
 body {
   transition: background-color 0.5s ease;
 }
+
+/* Layout Editor */
+.editor-view {
+  padding: 1rem;
+  padding-bottom: 300px; /* 大幅に増やして最下部までスクロール可能に */
+}
+
+.editor-canvas-area {
+  position: relative;
+  width: 100%;
+  max-width: 700px; /* PC画面でもA4用紙サイズに収めて編集しやすくする */
+  margin: 1rem auto;
+  aspect-ratio: 1 / 1.414; /* 強制的にA4用紙の比率を維持 */
+  background: white;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.editor-canvas-area img, .editor-canvas-area canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: fill; /* 画像をA4比率に合わせて引き伸ばす */
+  display: block;
+}
+
+.preview-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* クリックを正規のラベルに通すため */
+}
+
+.draggable-label {
+  position: absolute;
+  padding: 4px 8px;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px dashed var(--accent-gold);
+  color: var(--text-primary);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif; /* ゴシック体に固定 */
+  user-select: none;
+  touch-action: none;
+  z-index: 10;
+}
+
+.draggable-label.active {
+  background: rgba(14, 165, 233, 0.5);
+  border: 2px solid var(--accent-gold);
+  font-weight: bold;
+  z-index: 100;
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+}
+
+.editor-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9); /* 半透明にして視認性を向上 */
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  padding-bottom: calc(1.5rem + var(--safe-area-bottom));
+  border-top: 1px solid var(--border-color);
+  z-index: 1500;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease; /* スムーズな開閉アニメーション */
+}
+
+.editor-controls.collapsed {
+  transform: translateY(calc(100% - 40px)); /* ボタンだけ残して隠す */
+}
+
+.btn-toggle-controls {
+  position: absolute;
+  top: -36px;
+  right: 1.5rem;
+  background: var(--accent-gold);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 12px 12px 0 0;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 -4px 8px rgba(0,0,0,0.1);
+}
+
+#font-size-slider, #width-size-slider {
+  margin: 5px 0;
+  accent-color: var(--accent-gold);
+}
+
+.step-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+  margin-top: 4px;
+}
+
+.step-input input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  text-align: center;
+  padding: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  width: 50px;
+}
+
+.btn-step {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: white;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-step:active {
+  background: #e2e8f0;
+  transform: translateY(1px);
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.btn.active {
+  background: var(--accent-gold);
+  color: white;
+  border-color: var(--accent-gold);
+}
+
+@media (min-width: 768px) {
+  .editor-view {
+    display: flex;
+    gap: 2rem;
+    padding-bottom: 2rem;
+  }
+  .editor-container {
+    display: flex;
+    gap: 2rem;
+    width: 100%;
+    align-items: flex-start;
+  }
+  .editor-canvas-area {
+    flex: 1;
+    margin: 0;
+  }
+  .editor-controls {
+    position: sticky;
+    top: 100px;
+    bottom: auto;
+    width: 350px;
+    height: fit-content;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--bg-card);
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .btn-toggle-controls {
+    display: none;
+  }
+}
+
+/* Receipt Preview Enhancement */
+#receipt-preview img {
+    max-height: 400px;
+    object-fit: contain;
+    background: #fff;
+}
+
