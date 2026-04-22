@@ -6,39 +6,59 @@ import { getPdfConfig, savePdfConfig } from './src/config-manager.js';
 
 console.log("Main script loading...");
 
-// DOM Elements
-const projectListView = document.getElementById('project-list-view');
-const formView = document.getElementById('form-view');
-const projectList = document.getElementById('project-list');
-const tabsContainer = document.getElementById('tabs');
-const tabs = document.querySelectorAll('.tab');
-const fabPlus = document.getElementById('fab-plus');
-const btnBack = document.getElementById('btn-back');
-const btnBulkPdf = document.getElementById('btn-bulk-pdf');
-const pageTitle = document.getElementById('page-title');
-const typeModal = document.getElementById('type-modal');
-const fabBot = document.getElementById('fab-bot');
-const botContainer = document.getElementById('bot-container');
-const btnCloseBot = document.getElementById('btn-close-bot');
-const botMessages = document.getElementById('bot-messages');
-const botInput = document.getElementById('bot-input');
-const btnSendBot = document.getElementById('btn-send-bot');
-
+// State
 let currentTab = 'draft';
 let currentProject = null;
+let els = {}; // Centralized DOM elements
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log("App initializing (Production Mode)...");
+    try {
+        setupElements();
+        await init();
+    } catch (err) {
+        console.error("Critical: Init failed", err);
+        // Display FULL error detail to identify the culprit
+        document.body.insertAdjacentHTML('afterbegin', `
+            <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#111;color:#ff4444;padding:30px;z-index:9999;font-family:monospace;overflow:auto;line-height:1.4;">
+                <h2 style="color:white;margin-top:0;">⚠️ 致命的エラーが発生しました</h2>
+                <p style="background:#222;padding:10px;border-left:4px solid red;">${err.message}</p>
+                <pre style="font-size:12px;color:#aaa;">${err.stack}</pre>
+                <hr style="border-color:#333;">
+                <button onclick="location.reload()" style="background:#444;color:white;border:none;padding:10px 20px;border-radius:5px;">再読み込み</button>
+                <button onclick="indexedDB.deleteDatabase('keyval-store'); location.reload();" style="background:#822;color:white;border:none;padding:10px 20px;border-radius:5px;margin-left:10px;">ストレージをリセット</button>
+            </div>
+        `);
+    }
+});
+
+function setupElements() {
+    const ids = [
+        'project-list-view', 'form-view', 'project-list', 'tabs', 'fab-plus', 
+        'btn-back', 'btn-bulk-pdf', 'page-title', 'type-modal', 'fab-bot', 
+        'bot-container', 'btn-close-bot', 'bot-messages', 'bot-input', 'btn-send-bot',
+        'document-preview-overlay', 'preview-canvas-container', 'btn-close-preview',
+        'btn-preview-pdf-out', 'scanner-overlay', 'scanner-image', 'scanner-body',
+        'btn-scanner-cancel', 'btn-scanner-done', 'btn-scanner-rotate', 'btn-scanner-filter',
+        'editor-container'
+    ];
+    ids.forEach(id => {
+        els[id] = document.getElementById(id);
+    });
+    els.tabsList = document.querySelectorAll('.tab');
+}
 
 async function init() {
-  console.log("Initializing app...");
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('id');
 
     if (projectId) {
-        const projects = await getAllProjects();
-        const p = projects.find(item => item.id === projectId);
+        const p = await getProject(projectId);
         if (p) {
             currentProject = p;
             showForm(p.type, p);
+            bindEvents();
             return;
         }
     }
@@ -47,26 +67,26 @@ async function init() {
     bindEvents();
     bindBotEvents();
   } catch (err) {
-    console.error("Initialization failed:", err);
+    throw err;
   }
 }
 
 async function renderList() {
-  const container = document.getElementById('project-list');
-  container.innerHTML = '<div class="loading">読み込み中...</div>';
+  if (!els['project-list']) return;
+  els['project-list'].innerHTML = '<div class="loading">読み込み中...</div>';
 
   const projects = await getAllProjects();
   const filtered = projects.filter(p => p.status === currentTab);
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div class="empty-state">
+    els['project-list'].innerHTML = `<div class="empty-state">
       <div class="empty-icon">📁</div>
       <p>${currentTab === 'draft' ? '下書き中の書類はありません' : '完了済みの書類はありません'}</p>
     </div>`;
     return;
   }
 
-  container.innerHTML = filtered.map(p => `
+  els['project-list'].innerHTML = filtered.map(p => `
     <div class="project-card" onclick="editExistingProject('${p.id}')">
       <div class="project-card-header">
         <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
@@ -85,42 +105,47 @@ async function renderList() {
 }
 
 function bindEvents() {
-  fabPlus.addEventListener('click', () => {
-    typeModal.style.display = 'flex';
-  });
+  if (els['fab-plus']) els['fab-plus'].onclick = () => { els['type-modal'].style.display = 'flex'; };
 
-  document.getElementById('btn-close-modal').addEventListener('click', () => {
-    typeModal.style.display = 'none';
-  });
+  const closeBtn = document.getElementById('btn-close-modal');
+  if (closeBtn) closeBtn.onclick = () => { els['type-modal'].style.display = 'none'; };
 
-  document.getElementById('btn-new-kanryo').addEventListener('click', () => showForm('kanryo'));
-  document.getElementById('btn-new-marusan').addEventListener('click', () => showForm('marusan'));
-  document.getElementById('btn-new-geppo').addEventListener('click', () => showForm('geppo'));
+  const btnNewKanryo = document.getElementById('btn-new-kanryo');
+  const btnNewMarusan = document.getElementById('btn-new-marusan');
+  const btnNewGeppo = document.getElementById('btn-new-geppo');
 
-  btnBack.addEventListener('click', () => {
-    if (confirm('保存していない変更は破棄されます。戻りますか？')) {
-      formView.style.display = 'none';
-      projectListView.style.display = 'block';
-      pageTitle.textContent = 'プロジェクト一覧';
-      btnBack.style.display = 'none';
-      btnBulkPdf.style.display = 'none';
-      currentProject = null;
-      renderList();
-    }
-  });
+  if (btnNewKanryo) btnNewKanryo.onclick = () => showForm('kanryo');
+  if (btnNewMarusan) btnNewMarusan.onclick = () => showForm('marusan');
+  if (btnNewGeppo) btnNewGeppo.onclick = () => showForm('geppo');
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      currentTab = tab.dataset.tab;
-      renderList();
-    });
-  });
+  if (els['btn-back']) {
+      els['btn-back'].onclick = () => {
+        if (confirm('保存していない変更は破棄されます。戻りますか？')) {
+          els['form-view'].style.display = 'none';
+          els['project-list-view'].style.display = 'block';
+          els['page-title'].textContent = 'プロジェクト一覧';
+          els['btn-back'].style.display = 'none';
+          els['btn-bulk-pdf'].style.display = 'none';
+          currentProject = null;
+          renderList();
+        }
+      };
+  }
+
+  if (els.tabsList) {
+      els.tabsList.forEach(tab => {
+        tab.onclick = () => {
+          els.tabsList.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentTab = tab.dataset.tab;
+          renderList();
+        };
+      });
+  }
 }
 
 function showForm(type, project = null) {
-  typeModal.style.display = 'none';
+  if (els['type-modal']) els['type-modal'].style.display = 'none';
   currentProject = project || {
     id: `project_${Date.now()}`,
     status: 'draft',
@@ -136,14 +161,14 @@ function showForm(type, project = null) {
     receiptImage: null
   };
 
-  projectListView.style.display = 'none';
-  formView.style.display = 'block';
-  btnBack.style.display = 'block';
+  if (els['project-list-view']) els['project-list-view'].style.display = 'none';
+  if (els['form-view']) els['form-view'].style.display = 'block';
+  if (els['btn-back']) els['btn-back'].style.display = 'block';
   
   if (project) {
-      pageTitle.textContent = '再編集';
+      if (els['page-title']) els['page-title'].textContent = '再編集';
   } else {
-      pageTitle.textContent = type === 'kanryo' ? '完了報告書 作成' : (type === 'marusan' ? '丸産技研報告書 作成' : '月報 作成');
+      if (els['page-title']) els['page-title'].textContent = type === 'kanryo' ? '完了報告書 作成' : (type === 'marusan' ? '丸産技研報告書 作成' : '月報 作成');
   }
 
   renderForm();
@@ -151,7 +176,8 @@ function showForm(type, project = null) {
 
 function renderForm() {
   const isGeppo = currentProject.type === 'geppo';
-  const container = document.getElementById('editor-container');
+  const container = els['editor-container'];
+  if (!container) return;
   
   container.innerHTML = `
     <div class="form-container">
@@ -173,6 +199,19 @@ function renderForm() {
 
   document.getElementById('btn-save-draft').onclick = handleSaveDraft;
   document.getElementById('btn-preview-doc').onclick = handleShowPreview;
+
+  // Scanner Trigger
+  const btnScan = document.getElementById('btn-scan-receipt');
+  if (btnScan) {
+      btnScan.onclick = () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.capture = 'environment';
+          input.onchange = (e) => startScanner(e.target.files[0]);
+          input.click();
+      };
+  }
 
   // Attach Chip Listeners for support names
   const chipGroup = document.getElementById('support-chip-group');
@@ -239,9 +278,15 @@ function renderKanryoFields() {
       <label class="label">住所</label>
       <input type="text" id="field-address" value="${fd.address || ''}">
     </div>
-    <div class="form-group grid-2">
-      <div><label class="label">駐車場代</label><input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}"></div>
-      <div><label class="label">高速代</label><input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}"></div>
+    <div class="form-group">
+      <label class="label">駐車場代 / 高速代</label>
+      <div class="grid-2-action">
+        <div class="input-with-action">
+            <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="駐車場代">
+            <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt">📸 スキャン</button>
+        </div>
+        <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="高速代">
+      </div>
     </div>
   `;
 }
@@ -360,17 +405,20 @@ async function handleSaveDraft() {
   await saveProject(currentProject);
   alert('下書きを保存しました');
   
-  formView.style.display = 'none';
-  projectListView.style.display = 'block';
-  btnBack.style.display = 'none';
+  if (els['form-view']) els['form-view'].style.display = 'none';
+  if (els['project-list-view']) els['project-list-view'].style.display = 'block';
+  if (els['btn-back']) els['btn-back'].style.display = 'none';
   renderList();
 }
 
 async function handleShowPreview() {
-    const overlay = document.getElementById('document-preview-overlay');
-    const container = document.getElementById('preview-canvas-container');
-    const closeBtn = document.getElementById('btn-close-preview');
+    const overlay = els['document-preview-overlay'];
+    const container = els['preview-canvas-container'];
+    const closeBtn = els['btn-close-preview'];
+    const pdfBtn = els['btn-preview-pdf-out'];
     
+    if (!overlay || !container) return;
+
     syncDataToProject();
     
     container.innerHTML = '<div class="loading-text">プレビューを生成中...</div>';
@@ -387,6 +435,12 @@ async function handleShowPreview() {
         
         container.innerHTML = '';
         container.appendChild(canvas);
+        
+        // Link the PDF button in preview to the actual generator
+        pdfBtn.onclick = async () => {
+            overlay.classList.add('hidden');
+            await generatePdf(currentProject.id);
+        };
     } catch (err) {
         console.error(err);
         container.innerHTML = '<div class="error-text">プレビュー生成に失敗しました</div>';
@@ -424,18 +478,18 @@ async function generatePdf(id) {
 
 // Bot logic
 function bindBotEvents() {
-  if (fabBot) fabBot.onclick = () => botContainer.classList.toggle('hidden');
-  if (btnCloseBot) btnCloseBot.onclick = () => botContainer.classList.add('hidden');
-  if (btnSendBot) btnSendBot.onclick = handleBotSend;
-  if (botInput) botInput.onkeypress = (e) => { if (e.key === 'Enter') handleBotSend(); };
+  if (els['fab-bot']) els['fab-bot'].onclick = () => els['bot-container'].classList.toggle('hidden');
+  if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
+  if (els['btn-send-bot']) els['btn-send-bot'].onclick = handleBotSend;
+  if (els['bot-input']) els['bot-input'].onkeypress = (e) => { if (e.key === 'Enter') handleBotSend(); };
 }
 
 function handleBotSend() {
-  const msg = botInput.value.trim();
+  const msg = els['bot-input'].value.trim();
   if (!msg) return;
   
   addMessage('user', msg);
-  botInput.value = '';
+  els['bot-input'].value = '';
   
   setTimeout(() => {
     addMessage('bot', '担当者が内容を確認いたします。しばらくお待ちください。');
@@ -446,8 +500,108 @@ function addMessage(type, text) {
   const div = document.createElement('div');
   div.className = `message ${type}`;
   div.textContent = text;
-  botMessages.appendChild(div);
-  botMessages.scrollTop = botMessages.scrollHeight;
+  if (els['bot-messages']) {
+    els['bot-messages'].appendChild(div);
+    els['bot-messages'].scrollTop = els['bot-messages'].scrollHeight;
+  }
 }
 
-init();
+// --- Document Scanner Logic (CamScanner Style) ---
+let cropper = null;
+let isFiltered = false;
+
+async function startScanner(file) {
+    if (!file) return;
+    
+    const overlay = els['scanner-overlay'];
+    const imgEl = els['scanner-image'];
+    
+    if (!overlay || !imgEl) return;
+    
+    // Reset state
+    isFiltered = false;
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        imgEl.src = e.target.result;
+        overlay.classList.remove('hidden');
+        
+        // Initialize Cropper
+        cropper = new Cropper(imgEl, {
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 0.8,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+        });
+    };
+    reader.readAsDataURL(file);
+
+    // Bind Scanner Actions
+    document.getElementById('btn-scanner-cancel').onclick = () => {
+        overlay.classList.add('hidden');
+        if (cropper) cropper.destroy();
+    };
+
+    document.getElementById('btn-scanner-rotate').onclick = () => {
+        if (cropper) cropper.rotate(90);
+    };
+
+    document.getElementById('btn-scanner-filter').onclick = () => {
+        const canvas = cropper.getCroppedCanvas();
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Apply our pro adaptive threshold
+        const processed = adaptiveThreshold(imageData);
+        ctx.putImageData(processed, 0, 0);
+        
+        // Update cropper image with filtered result
+        const filteredUrl = canvas.toDataURL('image/jpeg', 0.8);
+        cropper.replace(filteredUrl);
+        isFiltered = true;
+    };
+
+    document.getElementById('btn-scanner-done').onclick = async () => {
+        if (!cropper) return;
+        
+        const canvas = cropper.getCroppedCanvas({
+            maxWidth: 1200,
+            maxHeight: 1200
+        });
+        
+        // Apply filter if not yet applied
+        if (!isFiltered) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const processed = adaptiveThreshold(imageData);
+            ctx.putImageData(processed, 0, 0);
+        }
+
+        const finalDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // Update Project & UI
+        currentProject.receiptImage = finalDataUrl;
+        const previewDiv = document.getElementById('receipt-preview');
+        if (previewDiv) {
+            previewDiv.innerHTML = `<img src="${finalDataUrl}">`;
+        }
+        
+        overlay.classList.add('hidden');
+        cropper.destroy();
+        cropper = null;
+        
+        await saveProject(currentProject);
+    };
+}
+
+// End of main.js
