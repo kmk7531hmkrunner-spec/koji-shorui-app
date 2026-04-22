@@ -448,6 +448,79 @@ input:focus, select:focus, textarea:focus {
   text-align: center;
 }
 
+/* Detail Selector Modal */
+.detail-selector {
+    text-align: center;
+    padding: 24px;
+}
+.detail-info-summary {
+    margin-bottom: 24px;
+    padding: 12px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+.detail-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.detail-actions-grid .btn {
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Bulk Action Bar */
+.bulk-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--primary-dark);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Selection Mode */
+.project-card.selectable {
+    position: relative;
+    padding-left: 50px;
+}
+.project-card.selectable::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    background: white;
+}
+.project-card.selected {
+    background: rgba(14, 165, 233, 0.1);
+    border-color: var(--primary-blue);
+}
+.project-card.selected::before {
+    background: var(--primary-blue);
+    border-color: var(--primary-blue);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    background-size: 16px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
 .hidden {
   display: none !important;
 }

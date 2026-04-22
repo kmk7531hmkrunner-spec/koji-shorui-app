@@ -1,14 +1,17 @@
 import { getAllProjects, saveProject, deleteProject, getProject, generateDraftName, set } from './src/storage.js';
 import { resizeImage, adaptiveThreshold } from './src/image-utils.js';
-import { generateSinglePdf, drawProjectToCanvas } from './src/pdf-engine.js';
+import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (All-Inclusive Verified Build)...");
+console.log("Main script loading (Professional Workflow Build)...");
 
-// --- State & Elements ---
+// --- State ---
 let currentTab = 'draft';
 let currentProject = null;
 let els = {}; 
+let isSelectionMode = false;
+let selectedIds = new Set();
+let longPressTimer = null;
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -24,12 +27,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupElements() {
     const ids = [
         'project-list-view', 'form-view', 'project-list', 'tabs', 'fab-plus', 
-        'btn-back', 'btn-bulk-pdf', 'page-title', 'type-modal', 'fab-bot', 
+        'btn-back', 'page-title', 'type-modal', 'fab-bot', 
         'bot-container', 'btn-close-bot', 'bot-messages', 'bot-input', 'btn-send-bot',
         'document-preview-overlay', 'preview-canvas-container', 'btn-close-preview',
-        'btn-preview-pdf-out', 'scanner-overlay', 'scanner-image', 'scanner-body',
+        'btn-preview-pdf-out', 'scanner-overlay', 'scanner-image', 
         'btn-scanner-cancel', 'btn-scanner-done', 'btn-scanner-rotate', 'btn-scanner-filter',
-        'editor-container'
+        'editor-container', 'project-detail-view', 'detail-summary-text', 'bulk-action-bar',
+        'selected-count', 'btn-bulk-pdf-exec', 'btn-cancel-select', 'btn-select-mode'
     ];
     ids.forEach(id => {
         els[id] = document.getElementById(id);
@@ -70,26 +74,138 @@ async function renderList() {
             <div class="empty-icon">📁</div>
             <p>${currentTab === 'draft' ? '下書き中の書類はありません' : '完了済みの書類はありません'}</p>
         </div>`;
+        updateSelectionUI();
         return;
     }
 
-    els['project-list'].innerHTML = filtered.map(p => `
-        <div class="project-card" onclick="editExistingProject('${p.id}')">
-            <div class="project-card-header">
-                <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
-                <span class="project-date">${p.date || '-'}</span>
-            </div>
-            <h3 class="project-title">${p.displayTitle || '名称未設定'}</h3>
-            <div class="project-card-footer">
-                <span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>
-                <div class="card-actions">
-                    ${currentTab === 'draft' ? `<button class="btn btn-icon btn-pdf" onclick="event.stopPropagation(); generatePdf('${p.id}')" title="PDF出力">📄</button>` : ''}
-                    <button class="btn btn-icon btn-delete" onclick="event.stopPropagation(); handleDeleteProject('${p.id}')" title="削除">🗑</button>
+    els['project-list'].innerHTML = filtered.map(p => {
+        const fd = p.formData || {};
+        const dateStr = p.date ? p.date.split('-').slice(1).join('/') : '--/--'; // MM/DD
+        const isSelected = selectedIds.has(p.id);
+        
+        return `
+            <div class="project-card ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" 
+                 data-id="${p.id}"
+                 onmousedown="handleMouseDown('${p.id}')"
+                 onmouseup="handleMouseUp('${p.id}')"
+                 ontouchstart="handleMouseDown('${p.id}')"
+                 ontouchend="handleMouseUp('${p.id}')"
+                 onclick="handleProjectTap('${p.id}')">
+                <div class="project-card-header">
+                    <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
+                    <span class="project-date">📅 ${dateStr}</span>
+                </div>
+                <div class="project-main-info">
+                    <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
+                    <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+                </div>
+                <div class="project-card-footer">
+                    <span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+
+    updateSelectionUI();
 }
+
+// Selection Mode Logic
+window.handleMouseDown = (id) => {
+    if (isSelectionMode) return;
+    longPressTimer = setTimeout(() => {
+        enterSelectionMode(id);
+    }, 800);
+};
+
+window.handleMouseUp = (id) => {
+    clearTimeout(longPressTimer);
+};
+
+window.handleProjectTap = (id) => {
+    if (isSelectionMode) {
+        toggleSelection(id);
+    } else {
+        showProjectDetail(id);
+    }
+};
+
+function enterSelectionMode(firstId) {
+    isSelectionMode = true;
+    selectedIds.add(firstId);
+    renderList();
+}
+
+function toggleSelection(id) {
+    if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+    } else {
+        selectedIds.add(id);
+    }
+    if (selectedIds.size === 0) {
+        exitSelectionMode();
+    } else {
+        renderList();
+    }
+}
+
+function exitSelectionMode() {
+    isSelectionMode = false;
+    selectedIds.clear();
+    renderList();
+}
+
+function updateSelectionUI() {
+    if (isSelectionMode) {
+        els['bulk-action-bar'].classList.remove('hidden');
+        els['selected-count'].textContent = `${selectedIds.size} 件選択中`;
+        els['fab-plus'].classList.add('hidden');
+    } else {
+        els['bulk-action-bar'].classList.add('hidden');
+        els['fab-plus'].classList.remove('hidden');
+    }
+}
+
+// --- Detail View Logic ---
+
+async function showProjectDetail(id) {
+    const p = await getProject(id);
+    if (!p) return;
+    
+    currentProject = p;
+    const dateStr = p.date || '未設定';
+    const fd = p.formData || {};
+    
+    els['detail-title'].textContent = p.type === 'kanryo' ? '完了報告書' : (p.type === 'marusan' ? '丸産報告書' : '月報');
+    els['detail-summary-text'].innerHTML = `
+        <div><strong>日付:</strong> ${dateStr}</div>
+        <div><strong>会社名:</strong> ${fd.companyName || '-'}</div>
+        <div><strong>監督名:</strong> ${fd.supervisorName || '-'}</div>
+        <div><strong>作業者:</strong> ${p.workerName || '-'}</div>
+    `;
+    
+    els['project-detail-view'].classList.remove('hidden');
+    
+    // Bind Detail Actions
+    document.getElementById('btn-detail-pdf').onclick = () => {
+        els['project-detail-view'].classList.add('hidden');
+        generatePdf(id);
+    };
+    document.getElementById('btn-detail-edit').onclick = () => {
+        els['project-detail-view'].classList.add('hidden');
+        showForm(p.type, p);
+    };
+    document.getElementById('btn-detail-delete').onclick = () => {
+        if (confirm('本当にこの書類を削除しますか？\nこの操作は取り消せません。')) {
+            els['project-detail-view'].classList.add('hidden');
+            handleDeleteProject(id);
+        }
+    };
+    document.getElementById('btn-close-detail').onclick = () => {
+        els['project-detail-view'].classList.add('hidden');
+    };
+}
+
+// --- Form View Logic ---
 
 function showForm(type, project = null) {
     if (els['type-modal']) els['type-modal'].style.display = 'none';
@@ -107,13 +223,10 @@ function showForm(type, project = null) {
         receiptImage: null
     };
 
-    if (els['project-list-view']) els['project-list-view'].style.display = 'none';
-    if (els['form-view']) els['form-view'].style.display = 'block';
-    if (els['btn-back']) els['btn-back'].style.display = 'block';
+    els['project-list-view'].classList.add('hidden');
+    els['form-view'].classList.remove('hidden');
     
-    if (els['page-title']) {
-        els['page-title'].textContent = project ? '再編集' : (type === 'kanryo' ? '完了報告書 作成' : (type === 'marusan' ? '丸産技研報告書 作成' : '月報 作成'));
-    }
+    els['form-page-title'].textContent = project ? '再編集' : '新規作成';
 
     renderForm();
 }
@@ -134,11 +247,10 @@ function renderForm() {
         </div>
     `;
 
-    // Bind Events
     document.getElementById('btn-save-draft').onclick = handleSaveDraft;
     document.getElementById('btn-preview-doc').onclick = handleShowPreview;
 
-    // Chip Listeners
+    // Attach Chip Listeners
     const chipGroup = document.getElementById('support-chip-group');
     if (chipGroup) {
         chipGroup.onclick = (e) => {
@@ -171,14 +283,12 @@ function renderForm() {
     }
 }
 
-// --- Field Renderers (FULLY COMPLIANT WITH PDF COORDINATES) ---
+// --- Field Renderers ---
 
 function renderKanryoFields() {
     const fd = currentProject.formData || {};
     return `
-        <!-- Section 1: Basic Info -->
         <div class="form-section">
-            <h3 class="section-title">基本情報</h3>
             <div class="form-group highlight-box">
                 <label class="label">📅 実施日付</label>
                 <input type="date" id="form-date" value="${currentProject.date || ''}">
@@ -204,17 +314,12 @@ function renderKanryoFields() {
                     }).join('')}
                 </div>
             </div>
-        </div>
-
-        <!-- Section 2: Site Info -->
-        <div class="form-section">
-            <h3 class="section-title">現場情報</h3>
             <div class="form-group">
                 <label class="label">現場名</label>
                 <input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場の名称">
             </div>
             <div class="form-group">
-                <label class="label">現場名(詳細) / 事業所名</label>
+                <label class="label">現場名(詳細)</label>
                 <input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="建物名・階数など">
             </div>
             <div class="form-group">
@@ -227,13 +332,11 @@ function renderKanryoFields() {
             </div>
         </div>
 
-        <!-- Section 3: Status -->
         <div class="form-section">
-            <h3 class="section-title">訪問・進捗</h3>
+            <h3 class="section-title">進捗・記録</h3>
             <div class="form-group">
                 <label class="label">訪問回数</label>
                 <select id="field-visitCount">
-                    <option value="" ${!fd.visitCount ? 'selected' : ''}>選択してください</option>
                     <option value="1" ${fd.visitCount === '1' ? 'selected' : ''}>1回目</option>
                     <option value="2" ${fd.visitCount === '2' ? 'selected' : ''}>2回目</option>
                     <option value="3" ${fd.visitCount === '3' ? 'selected' : ''}>3回目</option>
@@ -242,29 +345,10 @@ function renderKanryoFields() {
             <div class="form-group">
                 <label class="label">状況</label>
                 <select id="field-completionStatus">
-                    <option value="" ${!fd.completionStatus ? 'selected' : ''}>選択してください</option>
                     <option value="done" ${fd.completionStatus === 'done' ? 'selected' : ''}>完了</option>
                     <option value="notYet" ${fd.completionStatus === 'notYet' ? 'selected' : ''}>未</option>
                 </select>
             </div>
-        </div>
-
-        <!-- Section 4: Content -->
-        <div class="form-section">
-            <h3 class="section-title">作業記録</h3>
-            <div class="form-group">
-                <label class="label">工事内容</label>
-                <textarea id="field-content" rows="4" placeholder="作業内容を詳しく入力">${fd.content || ''}</textarea>
-            </div>
-            <div class="form-group">
-                <label class="label">日報</label>
-                <textarea id="field-dailyReport" rows="4" placeholder="日報内容を入力">${fd.dailyReport || ''}</textarea>
-            </div>
-        </div>
-
-        <!-- Section 5: Expenses -->
-        <div class="form-section">
-            <h3 class="section-title">経費</h3>
             <div class="form-group">
                 <label class="label">駐車場代</label>
                 <div class="flex-row" style="display:flex; gap:8px;">
@@ -288,9 +372,16 @@ function renderKanryoFields() {
                 <label class="label">消費税額</label>
                 <input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}" placeholder="消費税額">
             </div>
+            <div class="form-group">
+                <label class="label">工事内容</label>
+                <textarea id="field-content" rows="4">${fd.content || ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="label">日報</label>
+                <textarea id="field-dailyReport" rows="4">${fd.dailyReport || ''}</textarea>
+            </div>
         </div>
 
-        <!-- Section 6: Photo -->
         <div class="form-group photo-upload-box">
             <label class="label">📸 領収書の確認</label>
             <div id="receipt-preview" class="receipt-preview-container" onclick="handleReEditReceipt()">
@@ -370,7 +461,11 @@ async function handleSaveDraft() {
     currentProject.displayTitle = generateDraftName(currentProject.date, currentProject.workerName);
     await saveProject(currentProject);
     alert('下書きを保存しました');
-    location.reload();
+    
+    // Switch back to list
+    els['form-view'].classList.add('hidden');
+    els['project-list-view'].classList.remove('hidden');
+    renderList();
 }
 
 async function handleShowPreview() {
@@ -418,7 +513,11 @@ function bindGlobalEvents() {
 
     if (els['btn-back']) {
         els['btn-back'].onclick = () => {
-            if (confirm('戻りますか？')) location.href = '/';
+            if (confirm('戻りますか？')) {
+                els['form-view'].classList.add('hidden');
+                els['project-list-view'].classList.remove('hidden');
+                renderList();
+            }
         };
     }
 
@@ -431,6 +530,46 @@ function bindGlobalEvents() {
                 renderList();
             };
         });
+    }
+
+    // Selection Events
+    if (els['btn-select-mode']) els['btn-select-mode'].onclick = () => {
+        isSelectionMode = !isSelectionMode;
+        if (!isSelectionMode) selectedIds.clear();
+        renderList();
+    };
+
+    if (els['btn-cancel-select']) els['btn-cancel-select'].onclick = () => exitSelectionMode();
+
+    if (els['btn-bulk-pdf-exec']) els['btn-bulk-pdf-exec'].onclick = handleBulkPdf;
+}
+
+async function handleBulkPdf() {
+    if (selectedIds.size === 0) return;
+    
+    try {
+        alert(`${selectedIds.size} 件の一括PDF生成を開始します...`);
+        const projects = [];
+        for (const id of selectedIds) {
+            const p = await getProject(id);
+            if (p) projects.push(p);
+        }
+
+        const config = await getPdfConfig();
+        const templates = {
+            'kanryo': './images/kanrryoutemp.jpg',
+            'marusan': './images/marusan_report.jpg',
+            'geppo': './images/geppo.jpg'
+        };
+
+        const doc = await generateBulkPdf(projects, templates, config);
+        doc.save(`bulk_export_${Date.now()}.pdf`);
+        
+        exitSelectionMode();
+        alert('一括PDFの書き出しが完了しました');
+    } catch (err) {
+        console.error(err);
+        alert('一括生成に失敗しました');
     }
 }
 
@@ -486,10 +625,8 @@ async function editExistingProject(id) {
 }
 
 async function handleDeleteProject(id) {
-    if (confirm('削除しますか？')) {
-        await deleteProject(id);
-        await renderList();
-    }
+    await deleteProject(id);
+    await renderList();
 }
 
 async function generatePdf(id) {
@@ -502,7 +639,8 @@ async function generatePdf(id) {
     else bgUrl = './images/geppo.jpg';
     
     const config = await getPdfConfig();
-    await generateSinglePdf(p, bgUrl, config);
+    const doc = await generateSinglePdf(p, bgUrl, config);
+    doc.save(`${p.displayTitle || 'document'}.pdf`);
 }
 
 function bindBotEvents() {

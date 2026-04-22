@@ -21,39 +21,54 @@
 </head>
 <body>
     <div id="app">
-        <!-- Header -->
-        <header class="header">
-            <button class="btn btn-outline" id="btn-back" style="display: none;">◀ 戻る</button>
-            <h1 id="page-title">プロジェクト一覧</h1>
-            <div id="header-actions">
-                <a href="layout-editor.html" class="btn btn-outline" id="btn-settings-link" title="レイアウト設定ツール">⚙ 設定</a>
-                <button class="btn btn-primary" id="btn-bulk-pdf" style="display: none;">まとめてPDF</button>
-            </div>
-        </header>
+        <!-- Project List View -->
+        <div id="project-list-view">
+            <header class="app-header">
+                <h1 id="page-title">下書き一覧</h1>
+                <div class="bulk-actions-trigger">
+                    <button class="btn btn-icon" id="btn-select-mode">✔️</button>
+                </div>
+            </header>
+            
+            <nav id="tabs" class="tabs">
+                <div class="tab active" data-tab="draft">下書き</div>
+                <div class="tab" data-tab="sent">完了</div>
+            </nav>
 
-        <!-- Tabs -->
-        <div class="tabs" id="tabs">
-            <button class="tab active" data-tab="draft">下書き</button>
-            <button class="tab" data-tab="sent">完了済み</button>
+            <div id="project-list" class="project-list"></div>
+
+            <!-- Bulk Action Bar (Hidden by default) -->
+            <div id="bulk-action-bar" class="bulk-action-bar hidden">
+                <span id="selected-count">0 件選択中</span>
+                <button class="btn btn-primary btn-sm" id="btn-bulk-pdf-exec">一括PDF作成</button>
+                <button class="btn btn-outline btn-sm" id="btn-cancel-select">解除</button>
+            </div>
+
+            <button class="fab-plus" id="fab-plus">+</button>
         </div>
 
-        <!-- Main Content (List) -->
-        <main class="project-list" id="project-list-view">
-            <div id="project-list">
-                <!-- Project cards will be rendered here -->
+        <!-- Project Detail Detail View (Action Selector) -->
+        <div id="project-detail-view" class="modal hidden" style="z-index: 1500;">
+            <div class="modal-content detail-selector">
+                <h2 id="detail-title">書類のアクション</h2>
+                <div class="detail-info-summary" id="detail-summary-text"></div>
+                <div class="detail-actions-grid">
+                    <button class="btn btn-primary" id="btn-detail-pdf">📄 PDF作成</button>
+                    <button class="btn btn-outline" id="btn-detail-edit">✏️ 再編集</button>
+                    <button class="btn btn-danger" id="btn-detail-delete">🗑 削除</button>
+                </div>
+                <button class="btn btn-text" id="btn-close-detail">閉じる</button>
             </div>
-        </main>
+        </div>
 
-        <!-- Main Content (Form) -->
-        <main class="form-view" id="form-view" style="display: none;">
-            <div id="editor-container">
-                <!-- Form will be rendered here -->
-            </div>
-        </main>
-
-
-        <!-- Floating Action Button -->
-        <button class="fab" id="fab-plus" title="新規作成">新規作成</button>
+        <!-- Form View -->
+        <div id="form-view" class="hidden">
+            <header class="app-header">
+                <button class="btn-icon" id="btn-back">←</button>
+                <h1 id="form-page-title">作成</h1>
+            </header>
+            <div id="editor-container"></div>
+        </div>
 
         <!-- Chatbot -->
         <div id="bot-container" class="bot-container hidden">
