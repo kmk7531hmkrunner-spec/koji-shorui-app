@@ -194,6 +194,14 @@ const DEFAULT_CONFIG = {
         "fontSize": 9,
         "lineHeight": 6,
         "width": 91
+      },
+      {
+        "id": "receipt",
+        "label": "領収書貼り付け位置",
+        "x": 65.5,
+        "y": 48.0,
+        "width": 30,
+        "heightRatio": 1.4
       }
     ]
   },
@@ -339,7 +347,10 @@ const DEFAULT_CONFIG = {
 const CONFIG_KEY = 'pdf_layout_config';
 
 export async function getPdfConfig() {
-  const customConfig = await get(CONFIG_KEY) || {};
+  // Use a timeout for IndexedDB to prevent hanging if the browser blocks it
+  const timeout = (ms) => new Promise(resolve => setTimeout(() => resolve(null), ms));
+  const customConfig = await Promise.race([get(CONFIG_KEY), timeout(500)]) || {};
+  
   const config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   
   for (const type in customConfig) {
@@ -353,6 +364,7 @@ export async function getPdfConfig() {
           dF.width = cF.width !== undefined ? cF.width : dF.width;
           if (cF.lineHeight) dF.lineHeight = cF.lineHeight;
           if (cF.align) dF.align = cF.align;
+          if (cF.heightRatio) dF.heightRatio = cF.heightRatio;
         }
       });
     }

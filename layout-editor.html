@@ -6,6 +6,23 @@
     <title>印字レイアウト設定ツール</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Global Error Display */
+        #fatal-error-display {
+            position: fixed; top: 0; left: 0; width: 100%; background: #b91c1c; 
+            color: white; padding: 10px; z-index: 9999; font-family: monospace;
+            display: none;
+        }
+    </style>
+    <script>
+        window.onerror = function(msg, url, line) {
+            const el = document.getElementById('fatal-error-display');
+            if (el) {
+                el.style.display = 'block';
+                el.innerText = 'Fatal Error: ' + msg + '\nLine: ' + line + '\nURL: ' + url;
+            }
+        };
+    </script>
+    <style>
         body { background: #e2e8f0; }
         .editor-page { display: flex; flex-direction: column; height: 100vh; }
         .editor-header { 
@@ -47,6 +64,33 @@
         .helper-text { font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; }
         .zoom-controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 2000; }
         
+        .draggable-label {
+            position: absolute;
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid #0ea5e9;
+            color: #0369a1;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: move;
+            user-select: none;
+            z-index: 100;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+        .draggable-label.active {
+            z-index: 101;
+            background: rgba(14, 165, 233, 0.2);
+            border: 2px solid #0ea5e9;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+        }
+        .draggable-label:hover {
+            background: rgba(14, 165, 233, 0.15);
+        }
+
         .preview-active .draggable-label { 
             background: transparent; 
             border-color: transparent; 
@@ -69,6 +113,7 @@
     </style>
 </head>
 <body>
+    <div id="fatal-error-display"></div>
     <div class="editor-page">
         <header class="editor-header">
             <div style="display: flex; align-items: center; gap: 1rem;">
@@ -77,6 +122,8 @@
             </div>
             <button class="btn btn-primary" id="btn-save-layout">設定を保存する</button>
         </header>
+
+        <div id="editor-debug-log" style="background:#fee2e2; color:#b91c1c; padding:5px 10px; font-size:10px; display:none; position:sticky; top:65px; z-index:5000;"></div>
 
         <main class="editor-main">
             <div class="canvas-container" id="canvas-container">
@@ -148,13 +195,23 @@
                     </div>
 
                     <div class="control-group" style="margin-top: 10px;">
-                        <label class="label">枠の横幅 (%)</label>
+                        <label class="label">横幅 (%)</label>
                         <div class="step-input">
                             <button class="btn-step" data-dir="down" data-target="width">-</button>
                             <input type="number" id="input-width" step="1" value="30">
                             <button class="btn-step" data-dir="up" data-target="width">+</button>
                         </div>
                         <input type="range" id="width-size-slider" min="5" max="95" step="1" style="margin-top: 5px;">
+                    </div>
+
+                    <div class="control-group" id="height-ratio-group" style="margin-top: 10px;">
+                        <label class="label">枠の高さ (比率)</label>
+                        <div class="step-input">
+                            <button class="btn-step" data-dir="down" data-target="heightRatio">-</button>
+                            <input type="number" id="input-height-ratio" step="0.1" value="1.0">
+                            <button class="btn-step" data-dir="up" data-target="heightRatio">+</button>
+                        </div>
+                        <input type="range" id="height-ratio-slider" min="0.1" max="3.0" step="0.1" style="margin-top: 5px;">
                     </div>
                     
                     <div class="control-group" style="margin-top: 10px;">
@@ -173,13 +230,67 @@
                 </div>
 
                 <div style="margin-top: 2rem;">
-                    <button class="btn btn-outline" id="btn-export-config" style="width: 100%;">設定データをダウンロード</button>
+                    <button class="btn btn-primary" id="btn-copy-config" style="width: 100%;">設定データをコピー (JSON)</button>
+                    <button class="btn btn-outline" id="btn-export-config" style="width: 100%; margin-top: 0.5rem;">設定ファイルをダウンロード</button>
                     <button class="btn btn-outline" id="btn-reset-layout" style="width: 100%; margin-top: 0.5rem; color: #ef4444;">デフォルトに戻す</button>
                 </div>
             </aside>
         </main>
     </div>
 
+    <script type="module">
+        // Basic self-check inside HTML to diagnose why editor.js might fail
+        window.addEventListener('DOMContentLoaded', () => {
+            const logEl = document.getElementById('editor-debug-log');
+            if (logEl) {
+                logEl.style.display = 'block';
+                logEl.textContent = 'Preparing editor... waiting for logic to load.';
+            }
+        });
+    </script>
+    <script type="module">
+        // SELF-CONTAINED RESILIENT LOADER
+        import { getPdfConfig } from './src/config-manager.js';
+
+        async function safeInit() {
+            const debug = document.getElementById('editor-debug-log');
+            if (debug) { debug.style.display = 'block'; debug.textContent = "Safe Mode: Starting..."; }
+            
+            try {
+                // 1. Try to load config
+                const config = await getPdfConfig().catch(e => {
+                    console.warn("Config load failed, using local default", e);
+                    return null;
+                });
+                
+                if (debug) debug.textContent += " | Config checked";
+                
+                // 2. Locate elements
+                const canvasArea = document.getElementById('editor-canvas-area');
+                const img = document.getElementById('editor-template-img');
+                
+                // 3. Set Image with absolute fallback
+                const v = new Date().getTime();
+                const paths = ["/images/kanrryoutemp.jpg", "images/kanrryoutemp.jpg"];
+                let pIdx = 0;
+                
+                const tryLoad = () => {
+                   if (pIdx < paths.length) {
+                       const p = paths[pIdx++] + "?v=" + v;
+                       if (debug) debug.textContent += " | Trying: " + p;
+                       img.src = p;
+                   }
+                };
+                img.onerror = tryLoad;
+                tryLoad();
+
+            } catch (err) {
+                if (debug) debug.textContent = "FATAL: " + err.message;
+            }
+        }
+
+        window.addEventListener('load', safeInit);
+    </script>
     <script type="module" src="editor.js"></script>
 </body>
 </html>

@@ -1,5 +1,19 @@
 import { getPdfConfig, savePdfConfig, savePdfConfigAll, resetPdfConfig } from './src/config-manager.js';
-import { drawProjectToCanvas } from './src/pdf-engine.js';
+
+// We dynamically import pdf-engine only when needed for real preview 
+// to prevent loading failures from breaking the entire editor.
+let drawProjectToCanvas = null;
+async function loadPdfEngine() {
+    if (drawProjectToCanvas) return true;
+    try {
+        const module = await import('./src/pdf-engine.js');
+        drawProjectToCanvas = module.drawProjectToCanvas;
+        return true;
+    } catch (err) {
+        logDebug("PDF Engine Failed to load: " + err.message);
+        return false;
+    }
+}
 
 // DOM Elements
 const editorTypeSelect = document.getElementById('editor-type-select');
@@ -7,14 +21,18 @@ const editorTemplateImg = document.getElementById('editor-template-img');
 const editorCanvasArea = document.getElementById('editor-canvas-area');
 const fontSizeSlider = document.getElementById('font-size-slider');
 const widthSizeSlider = document.getElementById('width-size-slider');
+const heightRatioSlider = document.getElementById('height-ratio-slider');
+const heightRatioGroup = document.getElementById('height-ratio-group');
 const btnSaveLayout = document.getElementById('btn-save-layout');
 const btnResetLayout = document.getElementById('btn-reset-layout');
 const btnExportConfig = document.getElementById('btn-export-config');
+const btnCopyConfig = document.getElementById('btn-copy-config');
 
 const inputX = document.getElementById('input-x');
 const inputY = document.getElementById('input-y');
 const inputFont = document.getElementById('input-font');
 const inputWidth = document.getElementById('input-width');
+const inputHeightRatio = document.getElementById('input-height-ratio');
 const selectedFieldName = document.getElementById('selected-field-name');
 const fieldSettings = document.getElementById('field-settings');
 const noSelectionMsg = document.getElementById('no-selection-msg');
@@ -36,41 +54,67 @@ let previewCanvas = null;
 let isRealPreviewMode = false;
 let zoomLevel = 1.0;
 
+function logDebug(msg) {
+    const logEl = document.getElementById('editor-debug-log');
+    if (logEl) {
+        logEl.style.display = 'block';
+        logEl.textContent = "Debug: " + msg + " | " + logEl.textContent;
+    }
+    console.log("DEBUG:", msg);
+}
+
 async function init() {
-    currentLayoutConfig = await getPdfConfig();
-    bindEvents();
-    renderEditorCanvas(editorTypeSelect.value);
+    logDebug("Init started");
+    try {
+        currentLayoutConfig = await getPdfConfig();
+        logDebug("Config loaded");
+        bindEvents();
+        logDebug("Events bound");
+        renderEditorCanvas(editorTypeSelect.value);
+        logDebug("First render done");
+    } catch (err) {
+        logDebug("INIT ERROR: " + err.message);
+        alert("エディタの初期化に失敗しました: " + err.message);
+    }
 }
 
 function bindEvents() {
-    editorTypeSelect.addEventListener('change', (e) => {
+    // Helper to add listener safely
+    const addSafeListener = (el, type, handler) => {
+        if (el) el.addEventListener(type, handler);
+        else console.warn(`Element not found for ${type} listener`);
+    };
+
+    addSafeListener(editorTypeSelect, 'change', (e) => {
         selectedFieldId = null;
         updateSelectionUI();
         renderEditorCanvas(e.target.value);
     });
 
-    fontSizeSlider.addEventListener('input', (e) => updateSelectedField('fontSize', parseInt(e.target.value)));
-    widthSizeSlider.addEventListener('input', (e) => updateSelectedField('width', parseInt(e.target.value)));
+    addSafeListener(fontSizeSlider, 'input', (e) => updateSelectedField('fontSize', parseInt(e.target.value)));
+    addSafeListener(widthSizeSlider, 'input', (e) => updateSelectedField('width', parseInt(e.target.value)));
+    addSafeListener(heightRatioSlider, 'input', (e) => updateSelectedField('heightRatio', parseFloat(e.target.value)));
     
-    inputX.addEventListener('input', (e) => updateSelectedField('x', parseFloat(e.target.value)));
-    inputY.addEventListener('input', (e) => updateSelectedField('y', parseFloat(e.target.value)));
-    inputFont.addEventListener('input', (e) => updateSelectedField('fontSize', parseInt(e.target.value)));
-    inputWidth.addEventListener('input', (e) => updateSelectedField('width', parseInt(e.target.value)));
+    addSafeListener(inputX, 'input', (e) => updateSelectedField('x', parseFloat(e.target.value)));
+    addSafeListener(inputY, 'input', (e) => updateSelectedField('y', parseFloat(e.target.value)));
+    addSafeListener(inputFont, 'input', (e) => updateSelectedField('fontSize', parseInt(e.target.value)));
+    addSafeListener(inputWidth, 'input', (e) => updateSelectedField('width', parseInt(e.target.value)));
+    addSafeListener(inputHeightRatio, 'input', (e) => updateSelectedField('heightRatio', parseFloat(e.target.value)));
 
     document.querySelectorAll('.btn-step').forEach(btn => {
-        btn.addEventListener('click', () => {
+        addSafeListener(btn, 'click', () => {
             if (!selectedFieldId) return;
             const target = btn.dataset.target;
             const dir = btn.dataset.dir === 'up' ? 1 : -1;
-            const step = (target === 'x' || target === 'y') ? 0.1 : 1;
-            const input = document.getElementById(`input-${target}`);
+            const step = (target === 'x' || target === 'y' || target === 'heightRatio') ? 0.1 : 1;
+            const input = document.getElementById(`input-${target === 'heightRatio' ? 'height-ratio' : target}`);
             const newVal = parseFloat(input.value || 0) + (dir * step);
             input.value = (target === 'x' || target === 'y') ? newVal.toFixed(1) : Math.round(newVal);
             updateSelectedField(target === 'font' ? 'fontSize' : target, parseFloat(input.value));
         });
     });
 
-    btnSaveLayout.addEventListener('click', async () => {
+    addSafeListener(btnSaveLayout, 'click', async () => {
         try {
             console.log('Attempting to save layout...', currentLayoutConfig);
             const originalText = btnSaveLayout.textContent;
@@ -99,14 +143,14 @@ function bindEvents() {
         }
     });
 
-    btnResetLayout.addEventListener('click', async () => {
+    addSafeListener(btnResetLayout, 'click', async () => {
         if (confirm('すべてのレイアウト設定を初期状態に戻しますか？')) {
             await resetPdfConfig();
             window.location.reload();
         }
     });
 
-    btnExportConfig.addEventListener('click', () => {
+    addSafeListener(btnExportConfig, 'click', () => {
         const jsonStr = JSON.stringify(currentLayoutConfig, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -115,15 +159,30 @@ function bindEvents() {
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
+    
+    addSafeListener(btnCopyConfig, 'click', async () => {
+        const jsonStr = JSON.stringify(currentLayoutConfig, null, 2);
+        try {
+            await navigator.clipboard.writeText(jsonStr);
+            const originalText = btnCopyConfig.textContent;
+            btnCopyConfig.textContent = 'コピー済み！';
+            setTimeout(() => {
+                btnCopyConfig.textContent = originalText;
+            }, 2000);
+        } catch (err) {
+            console.error('Copy failed:', err);
+            alert('コピーに失敗しました。');
+        }
+    });
 
-    btnShowLabels.addEventListener('click', () => setPreviewMode(false));
-    btnShowReal.addEventListener('click', () => setPreviewMode(true));
+    addSafeListener(btnShowLabels, 'click', () => setPreviewMode(false));
+    addSafeListener(btnShowReal, 'click', () => setPreviewMode(true));
 
-    btnZoomIn.addEventListener('click', () => updateZoom(0.1));
-    btnZoomOut.addEventListener('click', () => updateZoom(-0.1));
+    addSafeListener(btnZoomIn, 'click', () => updateZoom(0.1));
+    addSafeListener(btnZoomOut, 'click', () => updateZoom(-0.1));
 
-    btnAlignLeft.addEventListener('click', () => updateSelectedField('align', 'left'));
-    btnAlignCenter.addEventListener('click', () => updateSelectedField('align', 'center'));
+    addSafeListener(btnAlignLeft, 'click', () => updateSelectedField('align', 'left'));
+    addSafeListener(btnAlignCenter, 'click', () => updateSelectedField('align', 'center'));
 
     document.addEventListener('keydown', handleKeyboardMove);
 }
@@ -148,13 +207,43 @@ function setPreviewMode(isReal) {
 }
 
 function renderEditorCanvas(type) {
+    logDebug("Rendering: " + type);
     const typeConfig = currentLayoutConfig[type];
-    if (!typeConfig) return;
+    if (!typeConfig) {
+        logDebug("Type not found in config: " + type);
+        return;
+    }
 
-    // Set template image
-    if (type === 'kanryo') editorTemplateImg.src = '/images/kanrryoutemp.jpg?v=1.2';
-    else if (type === 'marusan') editorTemplateImg.src = '/images/marusan_report.jpg';
-    else editorTemplateImg.src = '/images/geppo.jpg';
+    // Set template image (Try root-absolute path first for Vite)
+    const v = new Date().getTime();
+    let fileName = "";
+    if (type === 'kanryo') fileName = "kanrryoutemp.jpg";
+    else if (type === 'marusan') fileName = "marusan_report.jpg";
+    else fileName = "geppo.jpg";
+
+    const pathsToTry = [
+        `/images/${fileName}?v=${v}`,
+        `images/${fileName}?v=${v}`,
+        `./images/${fileName}?v=${v}`
+    ];
+    
+    let currentPathIndex = 0;
+    const tryNextPath = () => {
+        if (currentPathIndex < pathsToTry.length) {
+            const nextPath = pathsToTry[currentPathIndex++];
+            logDebug("Trying image path: " + nextPath);
+            editorTemplateImg.src = nextPath;
+        } else {
+            logDebug("ALL IMAGE PATHS FAILED");
+        }
+    };
+
+    editorTemplateImg.onerror = () => {
+        logDebug("FAILED: " + editorTemplateImg.src);
+        tryNextPath();
+    };
+    
+    tryNextPath();
 
     // Remove existing labels
     const oldLabels = editorCanvasArea.querySelectorAll('.draggable-label');
@@ -176,6 +265,7 @@ function renderEditorCanvas(type) {
         label.textContent = field.label;
         label.dataset.id = field.id;
         label.style.left = field.x + '%';
+        label.style.top = field.y + '%';
         label.style.width = (field.width || 30) + '%';
         
         if (field.id === 'receipt') {
@@ -226,10 +316,14 @@ async function updateRealPreview() {
     };
 
     const bgUrl = editorTemplateImg.src;
-    // drawProjectToCanvas internally handles text rendering.
-    // We want the text to be very visible in preview mode, so we could theoretically
-    // temporarily modify pdf-engine's font color if needed.
-    await drawProjectToCanvas(dummyProject, bgUrl, currentLayoutConfig, previewCanvas);
+    
+    // Ensure engine is loaded
+    const success = await loadPdfEngine();
+    if (success && drawProjectToCanvas) {
+        await drawProjectToCanvas(dummyProject, bgUrl, currentLayoutConfig, previewCanvas);
+    } else {
+        logDebug("Cannot show PDF preview: Engine not ready");
+    }
     
     // To solve "Text not visible" issue: Highlight the text areas on canvas
     // Or we can just ensure the dummy data is rich.
@@ -252,8 +346,9 @@ function startLabelDrag(e, field, label) {
         const cY = e.touches ? e.touches[0].clientY : e.clientY;
         const containerRect = editorCanvasArea.getBoundingClientRect();
 
-        let x = ((cX - containerRect.left - offsetX) / containerRect.width) * 100;
-        let y = ((cY - containerRect.top - offsetY) / containerRect.height) * 100;
+        // Account for Zoom (scale) in coordinate calculation
+        let x = ((cX - containerRect.left - offsetX) / (containerRect.width)) * 100;
+        let y = ((cY - containerRect.top - offsetY) / (containerRect.height)) * 100;
 
         x = Math.max(0, Math.min(100, x));
         y = Math.max(0, Math.min(100, y));
@@ -287,19 +382,23 @@ function selectField(field, label) {
     label.classList.add('active');
     selectedFieldId = field.id;
     
-    selectedFieldName.textContent = field.label;
-    inputX.value = field.x.toFixed(1);
-    inputY.value = field.y.toFixed(1);
-    inputFont.value = field.fontSize || 12;
-    inputWidth.value = field.width || 30;
+    if (selectedFieldName) selectedFieldName.textContent = field.label;
+    if (inputX) inputX.value = field.x.toFixed(1);
+    if (inputY) inputY.value = field.y.toFixed(1);
+    if (inputFont) inputFont.value = field.fontSize || 12;
+    if (inputWidth) inputWidth.value = field.width || 30;
     
-    fontSizeSlider.value = field.fontSize || 12;
-    widthSizeSlider.value = field.width || 30;
+    if (fontSizeSlider) fontSizeSlider.value = field.fontSize || 12;
+    if (widthSizeSlider) widthSizeSlider.value = field.width || 30;
+    if (inputHeightRatio) inputHeightRatio.value = field.heightRatio || 1.3;
+    if (heightRatioSlider) heightRatioSlider.value = field.heightRatio || 1.3;
+    
+    if (heightRatioGroup) heightRatioGroup.classList.toggle('hidden', field.id !== 'receipt');
     
     // Update Alignment Buttons
     const currentAlign = field.align || (['date', 'orderNumber'].includes(field.id) ? 'center' : 'left');
-    btnAlignLeft.classList.toggle('active', currentAlign === 'left');
-    btnAlignCenter.classList.toggle('active', currentAlign === 'center');
+    if (btnAlignLeft) btnAlignLeft.classList.toggle('active', currentAlign === 'left');
+    if (btnAlignCenter) btnAlignCenter.classList.toggle('active', currentAlign === 'center');
     
     updateSelectionUI();
 }
@@ -335,6 +434,11 @@ function updateSelectedField(prop, value) {
             label.style.width = value + '%';
             widthSizeSlider.value = value;
             inputWidth.value = value;
+        }
+        if (prop === 'heightRatio') {
+            label.style.aspectRatio = `1 / ${value}`;
+            heightRatioSlider.value = value;
+            inputHeightRatio.value = value;
         }
     }
     

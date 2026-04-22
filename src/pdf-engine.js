@@ -89,7 +89,7 @@ export async function drawProjectToCanvas(project, backgroundImage, config, targ
 
   const typeConfig = config[project.type];
   if (typeConfig && typeConfig.fields) {
-    typeConfig.fields.forEach(field => {
+    for (const field of typeConfig.fields) {
       let value = '';
       if (['date', 'companyName', 'workerName'].includes(field.id)) {
         value = project[field.id] || '';
@@ -209,24 +209,36 @@ export async function drawProjectToCanvas(project, backgroundImage, config, targ
            ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
            ctx.strokeRect(px_x, px_y, px_width, px_fontSize * 4);
         }
-        return;
+        continue;
       }
 
       // Special Handling for Receipt Image field in Config
       if (field.id === 'receipt') {
         if (project.receiptImage) {
-           const rx_img = await loadImage(project.receiptImage);
-           const rw = px_width;
-           const rh = px_width * (field.heightRatio || 1.3); // Default aspect ratio if not specified
-           ctx.drawImage(rx_img, px_x, px_y, rw, rh);
+          const rx_img = await loadImage(project.receiptImage);
+          const frameW = px_width;
+          const frameH = px_width * (field.heightRatio || 1.3);
+          const imgAspect = rx_img.width / rx_img.height;
+          const frameAspect = frameW / frameH;
+          let drawW, drawH;
+          if (imgAspect > frameAspect) {
+            drawW = frameW;
+            drawH = frameW / imgAspect;
+          } else {
+            drawH = frameH;
+            drawW = frameH * imgAspect;
+          }
+          const offsetX = (frameW - drawW) / 2;
+          const offsetY = (frameH - drawH) / 2;
+          ctx.drawImage(rx_img, px_x + offsetX, px_y + offsetY, drawW, drawH);
         } else if (isDebug) {
-           ctx.strokeStyle = 'rgba(0, 0, 255, 0.4)';
-           ctx.strokeRect(px_x, px_y, px_width, px_width * (field.heightRatio || 1.3));
-           ctx.font = `40px sans-serif`;
-           ctx.fillStyle = 'rgba(0,0,255,0.4)';
-           ctx.fillText("領収書位置", px_x + 10, px_y + 10);
+          ctx.strokeStyle = 'rgba(0, 0, 255, 0.4)';
+          ctx.strokeRect(px_x, px_y, px_width, px_width * (field.heightRatio || 1.3));
+          ctx.font = `40px sans-serif`;
+          ctx.fillStyle = 'rgba(0,0,255,0.4)';
+          ctx.fillText("領収書位置", px_x + 10, px_y + 10);
         }
-        return;
+        continue;
       }
 
       if (value || isDebug) {
@@ -236,7 +248,7 @@ export async function drawProjectToCanvas(project, backgroundImage, config, targ
         
         drawTextOnCanvas(ctx, String(value || field.label), px_x, px_y, px_width, px_fontSize, align, 1, isDebug);
       }
-    });
+    }
   }
 
   return canvas;
@@ -247,10 +259,8 @@ export async function generateSinglePdf(project, backgroundImage, config) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const canvas = await drawProjectToCanvas(project, backgroundImage, config);
   doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-  if (project.receiptImage && !project.receiptPosition) {
-    doc.addPage();
-    doc.addImage(project.receiptImage, 'JPEG', 20, 30, 100, 150);
-  }
+  // Receipt is now drawn on the template at a fixed position defined in config.
+  // We no longer add a separate page for it unless explicitly needed.
   return doc;
 }
 

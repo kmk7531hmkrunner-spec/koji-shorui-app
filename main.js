@@ -3,6 +3,10 @@ import { CompanyRules } from './src/rules.js';
 import { resizeImage, adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf } from './src/pdf-engine.js';
 import { getPdfConfig, savePdfConfig } from './src/config-manager.js';
+import Cropper from 'cropperjs';
+
+// Update debug status if function exists
+console.log("Main script loading...");
 
 // DOM Elements
 const projectListView = document.getElementById('project-list-view');
@@ -23,11 +27,21 @@ const botInput = document.getElementById('bot-input');
 const btnSendBot = document.getElementById('btn-send-bot');
 let currentTab = 'draft';
 let currentProject = null;
+let cropper = null;
 
 async function init() {
-  renderList();
-  bindEvents();
-  bindBotEvents();
+  console.log("Initializing app...");
+  try {
+    await renderList();
+    console.log("List rendered.");
+    bindEvents();
+    console.log("General events bound.");
+    bindBotEvents();
+    console.log("Bot events bound.");
+  } catch (err) {
+    console.error("Initialization failed:", err);
+    alert("アプリの初期化中にエラーが発生しました: " + err.message);
+  }
 }
 
 async function renderList() {
@@ -133,24 +147,26 @@ function bindBotEvents() {
     }
   }
 
-  btnCloseBot.addEventListener('click', () => {
-    botContainer.classList.add('hidden');
-  });
+  if (btnCloseBot) {
+    btnCloseBot.addEventListener('click', () => {
+      botContainer.classList.add('hidden');
+    });
+  }
 
-  btnSendBot.addEventListener('click', handleBotSend);
-  botInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleBotSend();
-  });
+  if (btnSendBot) {
+    btnSendBot.addEventListener('click', handleBotSend);
+  }
+  
+  if (botInput) {
+    botInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleBotSend();
+    });
+  }
 
   // Bulk PDF
-  btnBulkPdf.addEventListener('click', handleBulkPdf);
-
-
-  // Toggle Controls
-  // Bulk PDF
-  btnBulkPdf.addEventListener('click', handleBulkPdf);
-
-  // Settings Link (Handled by <a> in HTML, but we can add specific logic if needed)
+  if (btnBulkPdf) {
+    btnBulkPdf.addEventListener('click', handleBulkPdf);
+  }
 }
 
 
@@ -232,65 +248,86 @@ function findBotResponse(query) {
   return found ? found.answer : "すみません、その件については詳しくありません。「現場名の書き方」や「領収書」について聞いてみてください。";
 }
 function bindEvents() {
+  console.log("Binding events...");
   // Tab Switching
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      currentTab = tab.dataset.tab;
-      renderList();
+  if (tabs) {
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentTab = tab.dataset.tab;
+        renderList();
+      });
     });
-  });
+  }
 
   // FAB Plus
-  fabPlus.addEventListener('click', () => {
-    typeModal.style.display = 'flex';
-  });
+  if (fabPlus) {
+    fabPlus.addEventListener('click', () => {
+      if (typeModal) typeModal.style.display = 'flex';
+    });
+  }
 
   // Modal Buttons
-  document.getElementById('btn-new-kanryo').addEventListener('click', () => {
-    typeModal.style.display = 'none';
-    showForm('kanryo');
-  });
+  const btnNewKanryo = document.getElementById('btn-new-kanryo');
+  if (btnNewKanryo) {
+    btnNewKanryo.addEventListener('click', () => {
+      typeModal.style.display = 'none';
+      showForm('kanryo');
+    });
+  }
 
-  document.getElementById('btn-new-marusan').addEventListener('click', () => {
-    typeModal.style.display = 'none';
-    showForm('marusan');
-  });
+  const btnNewMarusan = document.getElementById('btn-new-marusan');
+  if (btnNewMarusan) {
+    btnNewMarusan.addEventListener('click', () => {
+      typeModal.style.display = 'none';
+      showForm('marusan');
+    });
+  }
 
-  document.getElementById('btn-new-geppo').addEventListener('click', () => {
-    typeModal.style.display = 'none';
-    showForm('geppo');
-  });
+  const btnNewGeppo = document.getElementById('btn-new-geppo');
+  if (btnNewGeppo) {
+    btnNewGeppo.addEventListener('click', () => {
+      typeModal.style.display = 'none';
+      showForm('geppo');
+    });
+  }
 
-  document.getElementById('btn-close-modal').addEventListener('click', () => {
-    typeModal.style.display = 'none';
-  });
+  const btnCloseModal = document.getElementById('btn-close-modal');
+  if (btnCloseModal) {
+    btnCloseModal.addEventListener('click', () => {
+      typeModal.style.display = 'none';
+    });
+  }
 
   // Back Button
-  btnBack.addEventListener('click', () => {
-    if (confirm('保存されていない変更は破棄されます。戻りますか？')) {
-      renderList();
-    }
-  });
-
-  // Card Actions
-  projectList.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-
-    const id = btn.dataset.id;
-    if (btn.classList.contains('btn-delete')) {
-      if (confirm('このプロジェクトを削除しますか？')) {
-        await deleteProject(id);
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      if (confirm('保存されていない変更は破棄されます。戻りますか？')) {
         renderList();
       }
-    } else if (btn.classList.contains('btn-edit')) {
-      editExistingProject(id);
-    } else if (btn.classList.contains('btn-pdf')) {
-      generatePdf(id);
-    }
-  });
+    });
+  }
+
+  // Card Actions
+  if (projectList) {
+    projectList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+
+      const id = btn.dataset.id;
+      if (btn.classList.contains('btn-delete')) {
+        if (confirm('このプロジェクトを削除しますか？')) {
+          await deleteProject(id);
+          renderList();
+        }
+      } else if (btn.classList.contains('btn-edit')) {
+        editExistingProject(id);
+      } else if (btn.classList.contains('btn-pdf')) {
+        generatePdf(id);
+      }
+    });
+  }
 }
 
 function showForm(type, project = null) {
@@ -375,6 +412,131 @@ function renderForm() {
 
   document.getElementById('btn-save-draft').addEventListener('click', handleSaveDraft);
   document.getElementById('btn-preview-doc').addEventListener('click', handleShowPreview);
+
+  // Cropper Modal Listeners
+  const cropperModal = document.getElementById('cropper-modal');
+  const btnCropperCancel = document.getElementById('btn-cropper-cancel');
+  const btnCropperConfirm = document.getElementById('btn-cropper-confirm');
+  const btnCropperReset = document.getElementById('btn-cropper-reset');
+  const btnCropperRotateLeft = document.getElementById('btn-cropper-rotate-left');
+  const btnCropperRotateRight = document.getElementById('btn-cropper-rotate-right');
+
+  if (btnCropperReset) {
+      btnCropperReset.onclick = () => {
+          if (cropper) {
+              cropper.clear();
+              // Resetting the crop box to cover everything
+              const containerData = cropper.getContainerData();
+              cropper.setCropBoxData({
+                  left: 0,
+                  top: 0,
+                  width: containerData.width,
+                  height: containerData.height
+              });
+          }
+      };
+  }
+
+  if (btnCropperRotateLeft) {
+      btnCropperRotateLeft.onclick = () => {
+          if (cropper) cropper.rotate(-90);
+      };
+  }
+
+  if (btnCropperRotateRight) {
+      btnCropperRotateRight.onclick = () => {
+          if (cropper) cropper.rotate(90);
+      };
+  }
+
+  if (btnCropperCancel) {
+      btnCropperCancel.onclick = () => {
+          if (cropper) {
+              cropper.destroy();
+              cropper = null;
+          }
+          cropperModal.style.display = 'none';
+      };
+  }
+
+  if (btnCropperConfirm) {
+      btnCropperConfirm.onclick = async () => {
+          if (!cropper) return;
+          
+          const previewDiv = document.getElementById('receipt-preview');
+          previewDiv.innerHTML = '<div style="color:var(--accent-gold); font-weight:bold; padding:15px; background:white; border-radius:8px;">画像を最適化しています...</div>';
+          
+          try {
+              // Get cropped canvas with stable dimensions
+              const canvas = cropper.getCroppedCanvas({
+                  maxWidth: 1280, 
+                  maxHeight: 1280,
+                  fillColor: '#fff',
+                  imageSmoothingEnabled: true,
+                  imageSmoothingQuality: 'high',
+              });
+
+              if (!canvas) throw new Error("Canvas generation failed");
+
+              // Close dedicated view via structural state change AFTER successful canvas generation
+              // The index.html observer will automatically restore the UI
+              cropperModal.style.display = 'none';
+              document.body.style.overflow = ''; 
+              
+              // Restore scroll position
+              const lastScroll = window.sessionStorage.getItem('lastScrollPos');
+              if (lastScroll) {
+                  window.scrollTo(0, parseInt(lastScroll));
+              }
+
+              cropper.destroy();
+              cropper = null;
+
+              // Robust data retrieval with small delay for UI smoothness
+              setTimeout(async () => {
+                  try {
+                      const ctx = canvas.getContext('2d');
+                      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                      
+                      // Apply existing adaptive thresholding
+                      const processedData = adaptiveThreshold(imgData);
+                      ctx.putImageData(processedData, 0, 0);
+
+                      const processedImageUrl = canvas.toDataURL('image/jpeg', 0.82);
+                      
+                      currentProject.receiptImage = processedImageUrl;
+                      previewDiv.innerHTML = `<img src="${processedImageUrl}" style="width: 100%; border-radius: 12px; border: 2px solid var(--accent-gold); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">`;
+                      
+                      await saveProject(currentProject);
+                  } catch (innerErr) {
+                      console.error("Critical Processing Error:", innerErr);
+                      previewDiv.innerHTML = '<div style="color:red; padding:10px; background:#fff1f2;">画像の加工中にエラーが発生しました。別の写真でお試しください。</div>';
+                  }
+              }, 50);
+          } catch (err) {
+              console.error("Cropping confirm error:", err);
+              previewDiv.innerHTML = '<div style="color:red; padding:10px; background:#fff1f2;">切り抜き処理に失敗しました。もう一度お試しください。</div>';
+          }
+      };
+  }
+
+  if (btnCropperCancel) {
+      btnCropperCancel.onclick = () => {
+          if (cropper) {
+              cropper.destroy();
+              cropper = null;
+          }
+          // Restore via structural state change
+          cropperModal.style.display = 'none';
+          document.body.style.overflow = '';
+          
+          // Restore scroll position
+          const lastScroll = window.sessionStorage.getItem('lastScrollPos');
+          if (lastScroll) {
+              window.scrollTo(0, parseInt(lastScroll));
+          }
+      };
+  }
 
   // Attach Chip Listeners
   const chipGroup = document.getElementById('support-chip-group');
@@ -462,31 +624,47 @@ async function handleReceiptUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const previewDiv = document.getElementById('receipt-preview');
-  previewDiv.innerHTML = '処理中...';
+  const reader = new FileReader();
+  reader.onload = (event) => {
+      const cropperModal = document.getElementById('cropper-modal');
+      const cropperImage = document.getElementById('cropper-image');
+      
+      // Store current scroll position and activate dedicated view
+      window.sessionStorage.setItem('lastScrollPos', window.scrollY);
+      // The index.html observer will automatically hide the UI when this becomes 'flex'
+      cropperModal.style.display = 'flex';
 
-  try {
-    const resizedCanvas = await resizeImage(file);
-    const ctx = resizedCanvas.getContext('2d');
-    const imgData = ctx.getImageData(0, 0, resizedCanvas.width, resizedCanvas.height);
-    const processedData = adaptiveThreshold(imgData);
-    ctx.putImageData(processedData, 0, 0);
+      if (cropper) {
+          cropper.destroy();
+      }
 
-    const processedImageUrl = resizedCanvas.toDataURL('image/jpeg', 0.8);
-    
-    // Store in current project
-    currentProject.receiptImage = processedImageUrl;
-    
-    previewDiv.innerHTML = `<img src="${processedImageUrl}" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color);">`;
-  } catch (err) {
-    console.error(err);
-    previewDiv.innerHTML = 'エラーが発生しました';
-  }
+      cropper = new Cropper(cropperImage, {
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 0.95, // Maximize initial crop box
+          restore: false,
+          guides: true,
+          center: true,
+          highlight: false,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+          toggleDragModeOnDblclick: false,
+          ready: function() {
+              // Prevent main page scrolling
+              document.body.style.overflow = 'hidden';
+          }
+      });
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderKanryoFields() {
   const fd = currentProject.formData || {};
   return `
+    <div class="form-group" style="border-bottom: 2px solid var(--accent-gold); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+      <label class="label" style="color: var(--accent-gold); font-weight: bold; font-size: 1rem;">📅 実施日付</label>
+      <input type="date" id="form-date" value="${currentProject.date || ''}" style="font-size: 1.2rem; border: 2px solid var(--accent-gold); border-radius: 8px; padding: 10px;">
+    </div>
     <div class="form-group">
       <label class="label">作業者名</label>
       <input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="氏名を入力">
@@ -529,13 +707,13 @@ function renderKanryoFields() {
       <label class="label">駐車場代</label>
       <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}">
     </div>
-    <div class="form-group" style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(var(--accent-gold-rgb), 0.2);">
-      <label class="label" style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 1.2rem;">📸</span> 領収書の撮影・選択 (白黒加工されます)
+    <div class="form-group" style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(var(--accent-gold-rgb), 0.2);">
+      <label class="label" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="font-size: 1.4rem;">📸</span> 領収書の撮影・選択
       </label>
-      <input type="file" id="field-receipt" accept="image/*" capture="environment" style="font-size: 0.8rem;">
-      <div id="receipt-preview" style="margin-top: 10px; display: flex; justify-content: center;">
-        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}" style="width: 100%; max-width: 300px; border-radius: 8px; border: 2px solid var(--accent-gold); box-shadow: var(--shadow-sm);">` : '<div style="font-size: 0.7rem; color: #999; padding: 20px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; width: 100%;">ここに加工後のプレビューが表示されます</div>'}
+      <input type="file" id="field-receipt" accept="image/*" capture="environment" style="width: 100%; padding: 15px; background: #fff; border: 2px solid #ddd; border-radius: 10px; font-weight: bold;">
+      <div id="receipt-preview" style="margin-top: 15px; display: flex; justify-content: center;">
+        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}" style="width: 100%; max-width: 300px; border-radius: 12px; border: 2px solid var(--accent-gold); box-shadow: var(--shadow-sm);">` : '<div style="font-size: 0.8rem; color: #999; padding: 25px; text-align: center; border: 2px dashed #ccc; border-radius: 10px; width: 100%; background: #fafafa;">ここに撮影後のプレビューが表示されます</div>'}
       </div>
     </div>
     <div class="form-group">
@@ -548,10 +726,6 @@ function renderKanryoFields() {
     <div class="form-group">
       <label class="label">材料代</label>
       <input type="number" id="field-materialFee" value="${fd.materialFee || ''}">
-    </div>
-    <div class="form-group">
-      <label class="label">日付</label>
-      <input type="date" id="form-date" value="${currentProject.date || ''}">
     </div>
     <div class="form-group">
       <label class="label">注文番号</label>
@@ -587,13 +761,13 @@ function renderKanryoFields() {
 function renderMarusanFields() {
   const fd = currentProject.formData || {};
   return `
+    <div class="form-group" style="border-bottom: 2px solid var(--accent-gold); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+      <label class="label" style="color: var(--accent-gold); font-weight: bold; font-size: 1rem;">📅 実施日付</label>
+      <input type="date" id="form-date" value="${currentProject.date || ''}" style="font-size: 1.2rem; border: 2px solid var(--accent-gold); border-radius: 8px; padding: 10px;">
+    </div>
     <div class="form-group">
       <label class="label">監督名</label>
       <input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}">
-    </div>
-    <div class="form-group">
-      <label class="label">日にち</label>
-      <input type="date" id="form-date" value="${currentProject.date || ''}">
     </div>
     <div class="form-group">
       <label class="label">現場名</label>
@@ -624,11 +798,13 @@ function renderMarusanFields() {
         <input type="text" id="field-worker6" placeholder="作業者6" value="${fd.worker6 || ''}">
       </div>
     </div>
-    <div class="form-group" style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(var(--accent-gold-rgb), 0.2);">
-      <label class="label">📸 領収書の撮影・選択</label>
-      <input type="file" id="field-receipt" accept="image/*" capture="environment">
-      <div id="receipt-preview" style="margin-top: 10px; display: flex; justify-content: center;">
-        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}" style="width: 100%; max-width: 300px; border-radius: 8px; border: 2px solid var(--accent-gold);">` : ''}
+    <div class="form-group" style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(var(--accent-gold-rgb), 0.2);">
+      <label class="label" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="font-size: 1.4rem;">📸</span> 領収書の撮影・選択
+      </label>
+      <input type="file" id="field-receipt" accept="image/*" capture="environment" style="width: 100%; padding: 15px; background: #fff; border: 2px solid #ddd; border-radius: 10px; font-weight: bold;">
+      <div id="receipt-preview" style="margin-top: 15px; display: flex; justify-content: center;">
+        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}" style="width: 100%; max-width: 300px; border-radius: 12px; border: 2px solid var(--accent-gold);">` : '<div style="font-size: 0.8rem; color: #999; padding: 25px; text-align: center; border: 2px dashed #ccc; border-radius: 10px; width: 100%; background: #fafafa;">ここに撮影後のプレビューが表示されます</div>'}
       </div>
     </div>
   `;
@@ -636,9 +812,9 @@ function renderMarusanFields() {
 
 function renderGeppoFields() {
   return `
-    <div class="form-group">
-      <label class="label">日付</label>
-      <input type="date" id="form-date" value="${currentProject.date || ''}">
+    <div class="form-group" style="border-bottom: 2px solid var(--accent-gold); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+      <label class="label" style="color: var(--accent-gold); font-weight: bold; font-size: 1rem;">📅 対象年月</label>
+      <input type="date" id="form-date" value="${currentProject.date || ''}" style="font-size: 1.2rem; border: 2px solid var(--accent-gold); border-radius: 8px; padding: 10px;">
     </div>
     <div class="form-group">
       <label class="label">氏名</label>

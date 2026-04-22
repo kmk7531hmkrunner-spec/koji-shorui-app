@@ -595,3 +595,167 @@ body {
     background: #fff;
 }
 
+/* Cropper Dedicated Independent Page Styles */
+.cropper-modal {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000; /* Solid Black Page */
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.native-cropper-header {
+    background-color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    height: 60px;
+    color: #333;
+}
+
+.native-icon-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    padding: 10px;
+}
+
+.cropper-container {
+    flex: 1;
+    width: 100%;
+    position: relative;
+    background-color: #f5f5f5; /* Light gray background like screenshot */
+}
+
+.cropper-container img {
+    display: block;
+    max-width: 100%;
+}
+
+.native-cropper-footer {
+    background-color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    padding-bottom: calc(15px + var(--safe-area-bottom));
+}
+
+.footer-left, .footer-center, .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.footer-center {
+    justify-content: center;
+}
+
+.native-action-btn {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #555;
+    cursor: pointer;
+    font-size: 0.75rem;
+    gap: 5px;
+}
+
+.native-action-btn .icon {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.native-btn-next {
+    background-color: #1a73e8; /* Prominent Blue */
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+    padding: 10px 24px;
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 4px 6px rgba(26, 115, 232, 0.2);
+}
+
+/* --- CROPPER NATIVE UI OVERRIDES --- */
+.cropper-view-box {
+    outline: 4px solid #1a73e8 !important;
+    outline-color: #1a73e8 !important;
+    border-radius: 2px !important;
+}
+
+.cropper-dashed, .cropper-center, .cropper-line {
+    display: none !important;
+}
+
+/* Corner Handles: Large White Circles with Blue Border */
+.cropper-point.point-ne,
+.cropper-point.point-nw,
+.cropper-point.point-sw,
+.cropper-point.point-se {
+    width: 28px !important;
+    height: 28px !important;
+    background-color: #fff !important;
+    border: 5px solid #1a73e8 !important;
+    border-radius: 50% !important;
+    opacity: 1 !important;
+}
+.cropper-point.point-ne { right: -14px !important; top: -14px !important; }
+.cropper-point.point-nw { left: -14px !important; top: -14px !important; }
+.cropper-point.point-se { right: -14px !important; bottom: -14px !important; }
+.cropper-point.point-sw { left: -14px !important; bottom: -14px !important; }
+
+/* Edge Handles: Pill-shaped */
+.cropper-point.point-e, .cropper-point.point-w {
+    width: 14px !important;
+    height: 36px !important;
+    background-color: #fff !important;
+    border: 4px solid #1a73e8 !important;
+    border-radius: 7px !important;
+    opacity: 1 !important;
+    top: 50% !important;
+    margin-top: -18px !important;
+}
+.cropper-point.point-e { right: -7px !important; }
+.cropper-point.point-w { left: -7px !important; }
+
+.cropper-point.point-n, .cropper-point.point-s {
+    width: 36px !important;
+    height: 14px !important;
+    background-color: #fff !important;
+    border: 4px solid #1a73e8 !important;
+    border-radius: 7px !important;
+    opacity: 1 !important;
+    left: 50% !important;
+    margin-left: -18px !important;
+}
+.cropper-point.point-n { top: -7px !important; }
+.cropper-point.point-s { bottom: -7px !important; }
+
+/* Precise image fit */
+.cropper-wrap-box {
+    background-color: #000;
+}
+
+/* Adjust Cropper.js styles for better look */
+.cropper-view-box, .cropper-face {
+    border-radius: 4px;
+}
+.cropper-line, .cropper-point {
+    background-color: var(--accent-gold);
+}
+
