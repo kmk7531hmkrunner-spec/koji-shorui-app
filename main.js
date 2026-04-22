@@ -3,7 +3,7 @@ import { resizeImage, adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Final Production Build)...");
+console.log("Main script loading (Final Verified Build)...");
 
 // --- State & Elements ---
 let currentTab = 'draft';
@@ -134,7 +134,7 @@ function renderForm() {
         </div>
     `;
 
-    // Bind Form-Specific Events
+    // Bind Events
     document.getElementById('btn-save-draft').onclick = handleSaveDraft;
     document.getElementById('btn-preview-doc').onclick = handleShowPreview;
 
@@ -171,7 +171,7 @@ function renderForm() {
     }
 }
 
-// --- Field Renderers ---
+// --- Field Renderers (WITH CORRECT ORDER) ---
 
 function renderKanryoFields() {
     const fd = currentProject.formData || {};
@@ -181,11 +181,11 @@ function renderKanryoFields() {
             <input type="date" id="form-date" value="${currentProject.date || ''}">
         </div>
         <div class="form-group">
-            <label class="label">作業者名</label>
+            <label class="label">作業者</label>
             <input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="あなたの名前">
         </div>
         <div class="form-group">
-            <label class="label">応援者名</label>
+            <label class="label">応援者</label>
             <div id="support-chip-group" class="chip-group">
                 ${['湧', '菊', '須', '田', '大', '下', '巻', '木', 'タン', '富'].map(name => {
                     const isActive = (fd.supportName || []).includes(name);
@@ -198,7 +198,7 @@ function renderKanryoFields() {
             <input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場の名称">
         </div>
         <div class="form-group">
-            <label class="label">現場名 (詳細)</label>
+            <label class="label">現場名(詳細)</label>
             <input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="建物名・階数など">
         </div>
         <div class="form-group">
@@ -206,13 +206,18 @@ function renderKanryoFields() {
             <input type="text" id="field-address" value="${fd.address || ''}" placeholder="現場の住所">
         </div>
         <div class="form-group">
-            <label class="label">駐車場代 / 高速代</label>
             <div class="grid-2-action">
                 <div class="input-with-action">
-                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="駐車場代">
-                    <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt">📸 スキャン</button>
+                    <label class="label">駐車場代</label>
+                    <div class="flex-row" style="display:flex; gap:8px;">
+                        <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="駐車場代" style="flex:1;">
+                        <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt">📸 スキャン</button>
+                    </div>
                 </div>
-                <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="高速代">
+                <div>
+                    <label class="label">高速代</label>
+                    <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="高速代">
+                </div>
             </div>
         </div>
         <div class="form-group">
@@ -298,8 +303,7 @@ async function handleSaveDraft() {
     currentProject.displayTitle = generateDraftName(currentProject.date, currentProject.workerName);
     await saveProject(currentProject);
     alert('下書きを保存しました');
-    
-    location.reload(); // Simple way to reset state and show list
+    location.reload();
 }
 
 async function handleShowPreview() {
@@ -401,7 +405,7 @@ async function startScanner(file) {
             ctx.putImageData(processed, 0, 0);
         }
         currentProject.receiptImage = canvas.toDataURL('image/jpeg', 0.8);
-        renderForm(); // Refresh preview
+        renderForm(); 
         overlay.classList.add('hidden');
         cropper.destroy();
         await saveProject(currentProject);
@@ -461,12 +465,8 @@ function showErrorOverlay(err) {
 }
 
 window.handleReEditReceipt = function() {
-    if (currentProject && currentProject.receiptImage) {
-        // Since we have inline scanner now, maybe just trigger it again or similar. 
-        // For now, let's just trigger a click on the scan button if needed.
-        const btn = document.getElementById('btn-scan-receipt');
-        if (btn) btn.click();
-    }
+    const btn = document.getElementById('btn-scan-receipt');
+    if (btn) btn.click();
 };
 
 window.generatePdf = generatePdf;
