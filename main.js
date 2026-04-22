@@ -3,7 +3,7 @@ import { resizeImage, adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Final Verified Build)...");
+console.log("Main script loading (All-Inclusive Verified Build)...");
 
 // --- State & Elements ---
 let currentTab = 'draft';
@@ -171,59 +171,126 @@ function renderForm() {
     }
 }
 
-// --- Field Renderers (WITH CORRECT ORDER) ---
+// --- Field Renderers (FULLY COMPLIANT WITH PDF COORDINATES) ---
 
 function renderKanryoFields() {
     const fd = currentProject.formData || {};
     return `
-        <div class="form-group highlight-box">
-            <label class="label">📅 実施日付</label>
-            <input type="date" id="form-date" value="${currentProject.date || ''}">
-        </div>
-        <div class="form-group">
-            <label class="label">作業者</label>
-            <input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="あなたの名前">
-        </div>
-        <div class="form-group">
-            <label class="label">応援者</label>
-            <div id="support-chip-group" class="chip-group">
-                ${['湧', '菊', '須', '田', '大', '下', '巻', '木', 'タン', '富'].map(name => {
-                    const isActive = (fd.supportName || []).includes(name);
-                    return `<button type="button" class="chip-btn ${isActive ? 'active' : ''}" data-name="${name}">${name}</button>`;
-                }).join('')}
+        <!-- Section 1: Basic Info -->
+        <div class="form-section">
+            <h3 class="section-title">基本情報</h3>
+            <div class="form-group highlight-box">
+                <label class="label">📅 実施日付</label>
+                <input type="date" id="form-date" value="${currentProject.date || ''}">
             </div>
-        </div>
-        <div class="form-group">
-            <label class="label">現場名</label>
-            <input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場の名称">
-        </div>
-        <div class="form-group">
-            <label class="label">現場名(詳細)</label>
-            <input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="建物名・階数など">
-        </div>
-        <div class="form-group">
-            <label class="label">住所</label>
-            <input type="text" id="field-address" value="${fd.address || ''}" placeholder="現場の住所">
-        </div>
-        <div class="form-group">
-            <div class="grid-2-action">
-                <div class="input-with-action">
-                    <label class="label">駐車場代</label>
-                    <div class="flex-row" style="display:flex; gap:8px;">
-                        <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="駐車場代" style="flex:1;">
-                        <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt">📸 スキャン</button>
-                    </div>
-                </div>
-                <div>
-                    <label class="label">高速代</label>
-                    <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="高速代">
+            <div class="form-group">
+                <label class="label">会社名</label>
+                <input type="text" id="field-companyName" value="${fd.companyName || ''}" placeholder="会社名">
+            </div>
+            <div class="form-group">
+                <label class="label">注文番号</label>
+                <input type="text" id="field-orderNumber" value="${fd.orderNumber || ''}" placeholder="注文番号">
+            </div>
+            <div class="form-group">
+                <label class="label">作業者</label>
+                <input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="作業者の名前">
+            </div>
+            <div class="form-group">
+                <label class="label">応援者</label>
+                <div id="support-chip-group" class="chip-group">
+                    ${['湧', '菊', '須', '田', '大', '下', '巻', '木', 'タン', '富'].map(name => {
+                        const isActive = (fd.supportName || []).includes(name);
+                        return `<button type="button" class="chip-btn ${isActive ? 'active' : ''}" data-name="${name}">${name}</button>`;
+                    }).join('')}
                 </div>
             </div>
         </div>
-        <div class="form-group">
-            <label class="label">工事内容</label>
-            <textarea id="field-content" rows="6" placeholder="作業内容を詳しく入力">${fd.content || ''}</textarea>
+
+        <!-- Section 2: Site Info -->
+        <div class="form-section">
+            <h3 class="section-title">現場情報</h3>
+            <div class="form-group">
+                <label class="label">現場名</label>
+                <input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場の名称">
+            </div>
+            <div class="form-group">
+                <label class="label">現場名(詳細) / 事業所名</label>
+                <input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="建物名・階数など">
+            </div>
+            <div class="form-group">
+                <label class="label">監督名</label>
+                <input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="監督名">
+            </div>
+            <div class="form-group">
+                <label class="label">住所</label>
+                <input type="text" id="field-address" value="${fd.address || ''}" placeholder="現場の住所">
+            </div>
         </div>
+
+        <!-- Section 3: Status -->
+        <div class="form-section">
+            <h3 class="section-title">訪問・進捗</h3>
+            <div class="form-group">
+                <label class="label">訪問回数</label>
+                <select id="field-visitCount">
+                    <option value="" ${!fd.visitCount ? 'selected' : ''}>選択してください</option>
+                    <option value="1" ${fd.visitCount === '1' ? 'selected' : ''}>1回目</option>
+                    <option value="2" ${fd.visitCount === '2' ? 'selected' : ''}>2回目</option>
+                    <option value="3" ${fd.visitCount === '3' ? 'selected' : ''}>3回目</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="label">状況</label>
+                <select id="field-completionStatus">
+                    <option value="" ${!fd.completionStatus ? 'selected' : ''}>選択してください</option>
+                    <option value="done" ${fd.completionStatus === 'done' ? 'selected' : ''}>完了</option>
+                    <option value="notYet" ${fd.completionStatus === 'notYet' ? 'selected' : ''}>未</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Section 4: Content -->
+        <div class="form-section">
+            <h3 class="section-title">作業記録</h3>
+            <div class="form-group">
+                <label class="label">工事内容</label>
+                <textarea id="field-content" rows="4" placeholder="作業内容を詳しく入力">${fd.content || ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="label">日報</label>
+                <textarea id="field-dailyReport" rows="4" placeholder="日報内容を入力">${fd.dailyReport || ''}</textarea>
+            </div>
+        </div>
+
+        <!-- Section 5: Expenses -->
+        <div class="form-section">
+            <h3 class="section-title">経費</h3>
+            <div class="form-group">
+                <label class="label">駐車場代</label>
+                <div class="flex-row" style="display:flex; gap:8px;">
+                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="駐車場代" style="flex:1;">
+                    <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt">📸 スキャン</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="label">高速代</label>
+                <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="高速代">
+            </div>
+            <div class="form-group">
+                <label class="label">材料代</label>
+                <input type="number" id="field-materialFee" value="${fd.materialFee || ''}" placeholder="材料代">
+            </div>
+            <div class="form-group">
+                <label class="label">合計額</label>
+                <input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}" placeholder="合計額">
+            </div>
+            <div class="form-group">
+                <label class="label">消費税額</label>
+                <input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}" placeholder="消費税額">
+            </div>
+        </div>
+
+        <!-- Section 6: Photo -->
         <div class="form-group photo-upload-box">
             <label class="label">📸 領収書の確認</label>
             <div id="receipt-preview" class="receipt-preview-container" onclick="handleReEditReceipt()">
@@ -287,7 +354,7 @@ function syncDataToProject() {
     if (workerEl) currentProject.workerName = workerEl.value;
 
     const fd = currentProject.formData || {};
-    const allInputs = document.querySelectorAll('[id^="field-"], [id^="form-"]');
+    const allInputs = document.querySelectorAll('[id^="field-"], [id^="form-"], select[id^="field-"]');
     allInputs.forEach(el => {
         if (el.id === 'form-date' || el.id === 'form-worker') return;
         const key = el.id.replace('field-', '').replace('form-', '');
@@ -328,7 +395,7 @@ async function handleShowPreview() {
 
         els['btn-preview-pdf-out'].onclick = async () => {
             overlay.classList.add('hidden');
-            await generateSinglePdf(currentProject);
+            await generateSinglePdf(currentProject, bgUrl, config);
         };
     } catch (err) {
         console.error(err);
@@ -427,7 +494,15 @@ async function handleDeleteProject(id) {
 
 async function generatePdf(id) {
     const p = await getProject(id);
-    if (p) await generateSinglePdf(p);
+    if (!p) return;
+    
+    let bgUrl = '';
+    if (p.type === 'kanryo') bgUrl = './images/kanrryoutemp.jpg';
+    else if (p.type === 'marusan') bgUrl = './images/marusan_report.jpg';
+    else bgUrl = './images/geppo.jpg';
+    
+    const config = await getPdfConfig();
+    await generateSinglePdf(p, bgUrl, config);
 }
 
 function bindBotEvents() {
