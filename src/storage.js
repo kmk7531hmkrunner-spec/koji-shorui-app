@@ -1,4 +1,4 @@
-import { get, set, del, keys } from 'idb-keyval';
+export { get, set, del, keys } from 'idb-keyval';
 
 /**
  * Data Schema:

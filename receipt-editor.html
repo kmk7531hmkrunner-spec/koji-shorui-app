@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>領収書スキャナー</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --bg-color: #f8fafc;
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .app-container {
+            display: grid; grid-template-rows: 60px 1fr auto;
+            width: 100%; height: 100%;
+        }
+        .header {
+            background: #fff; border-bottom: 1px solid #e2e8f0;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px; z-index: 10;
+        }
+        .header h1 { font-size: 1.1rem; margin: 0; color: #1e293b; font-weight: 700; }
+        .btn-icon { background: none; border: none; font-size: 1.5rem; padding: 8px; cursor: pointer; color: #64748b; }
+        
+        .viewer {
+            background: #000; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        #image-target { display: block; max-width: 100%; max-height: 100%; }
+
+        .footer {
+            background: #fff; border-top: 1px solid #e2e8f0;
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+            z-index: 10;
+        }
+        .toolbar { display: flex; justify-content: space-around; margin-bottom: 16px; }
+        .tool-btn {
+            background: none; border: none; display: flex; flex-direction: column;
+            align-items: center; gap: 4px; font-size: 0.75rem; color: #64748b;
+            flex: 1; cursor: pointer; transition: all 0.2s;
+        }
+        .tool-btn .icon { font-size: 1.5rem; color: #1e293b; }
+        .tool-btn.active { color: var(--primary); font-weight: 700; }
+        .tool-btn.active .icon { color: var(--primary); }
+
+        .btn-save {
+            width: 100%; background: var(--primary); color: #fff; border: none;
+            padding: 14px; border-radius: 12px; font-weight: 700; font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .btn-save:active { transform: scale(0.98); }
+        .btn-save:disabled { background: #cbd5e1; box-shadow: none; }
+
+        /* Cropper Customization - Native App Feel */
+        .cropper-view-box { outline: 2px solid var(--primary) !important; outline-color: var(--primary) !important; }
+        .cropper-point { background-color: var(--primary) !important; opacity: 1 !important; }
+        .cropper-point.point-se, .cropper-point.point-sw, .cropper-point.point-ne, .cropper-point.point-nw {
+            width: 24px !important; height: 24px !important; border-radius: 50% !important;
+            border: 4px solid #fff !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <button class="btn-icon" id="btn-cancel">✕</button>
+            <h1>領収書を整える</h1>
+            <div style="width:40px"></div>
+        </header>
+
+        <main class="viewer">
+            <img id="image-target" src="">
+        </main>
+
+        <footer class="footer">
+            <div class="toolbar">
+                <button class="tool-btn" id="btn-rotate">
+                    <span class="icon">↻</span>
+                    <span>回転</span>
+                </button>
+                <button class="tool-btn" id="btn-scan-mode">
+                    <span class="icon">🌓</span>
+                    <span id="scan-label">白黒加工</span>
+                </button>
+                <button class="tool-btn" id="btn-reset">
+                    <span class="icon">⟲</span>
+                    <span>リセット</span>
+                </button>
+            </div>
+            <button class="btn-save" id="btn-save">保存して完了</button>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script type="module">
+        import { get, set } from './src/storage.js';
+        import { adaptiveThreshold } from './src/image-utils.js';
+
+        let cropper;
+        let isScanMode = false;
+        const img = document.getElementById('image-target');
+        const params = new URLSearchParams(window.location.search);
+        const projectId = params.get('id');
+
+        async function init() {
+            if (!projectId) { window.location.href = 'index.html'; return; }
+
+            // 1. Try temp storage (fresh upload)
+            let source = await get('temp_receipt_image');
+            
+            // 2. Try project storage (re-edit)
+            if (!source) {
+                const project = await get(projectId);
+                source = project ? project.receiptImage : null;
+            }
+
+            if (!source) {
+                alert('画像が見つかりません。もう一度撮影してください。');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Clear temp storage
+            await set('temp_receipt_image', null);
+
+            img.src = source;
+            img.onload = () => {
+                cropper = new Cropper(img, {
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 0.95,
+                    background: false,
+                    modal: true,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                    ready() { console.log('Cropper ready'); }
+                });
+            };
+        }
+
+        document.getElementById('btn-rotate').onclick = () => cropper.rotate(90);
+        document.getElementById('btn-reset').onclick = () => {
+            isScanMode = false;
+            const btn = document.getElementById('btn-scan-mode');
+            btn.classList.remove('active');
+            document.getElementById('scan-label').innerText = '白黒加工';
+            cropper.reset();
+        };
+        
+        document.getElementById('btn-scan-mode').onclick = () => {
+            isScanMode = !isScanMode;
+            const btn = document.getElementById('btn-scan-mode');
+            const label = document.getElementById('scan-label');
+            if (isScanMode) {
+                btn.classList.add('active');
+                label.innerText = '白黒ON';
+            } else {
+                btn.classList.remove('active');
+                label.innerText = '白黒加工';
+            }
+        };
+
+        document.getElementById('btn-cancel').onclick = () => {
+            if (confirm('編集内容を破棄して戻りますか？')) {
+                window.location.href = `index.html?id=${projectId}`;
+            }
+        };
+
+        document.getElementById('btn-save').onclick = async () => {
+            const saveBtn = document.getElementById('btn-save');
+            saveBtn.innerText = '処理中...';
+            saveBtn.disabled = true;
+
+            try {
+                let canvas = cropper.getCroppedCanvas({
+                    maxWidth: 2048,
+                    maxHeight: 2048,
+                    fillColor: '#fff',
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high',
+                });
+
+                if (isScanMode) {
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    // Standard CamScanner settings: s=16 (window), t=18 (threshold)
+                    const processed = adaptiveThreshold(imageData, 16, 18);
+                    ctx.putImageData(processed, 0, 0);
+                }
+
+                const finalData = canvas.toDataURL('image/jpeg', 0.85);
+                
+                const project = await get(projectId);
+                if (project) {
+                    project.receiptImage = finalData;
+                    await set(projectId, project);
+                }
+                
+                window.location.href = `index.html?id=${projectId}`;
+            } catch (err) {
+                console.error(err);
+                alert('保存中にエラーが発生しました');
+                saveBtn.innerText = '保存して完了';
+                saveBtn.disabled = false;
+            }
+        };
+
+        init();
+    </script>
+</body>
+</html>
