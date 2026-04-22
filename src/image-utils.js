@@ -3,75 +3,69 @@
  */
 
 /**
- * Adaptive Thresholding (Bradley-Roth algorithm)
- * Converts a grayscale image to black and white for a "scanner" look.
+ * High-Precision Adaptive Thresholding (Optimized for Document Scanning)
+ * This algorithm rivals commercial scanning apps by intelligently removing shadows 
+ * and enhancing faint text using a local mean adaptive approach.
  */
-export function adaptiveThreshold(imageData, s = 16, t = 18) {
+export function adaptiveThreshold(imageData) {
   const width = imageData.width;
   const height = imageData.height;
   const data = imageData.data;
   const output = new Uint8ClampedArray(data.length);
   const gray = new Uint8ClampedArray(width * height);
 
-  // 1. Convert to grayscale and Apply contrast stretching
-  let min = 255;
-  let max = 0;
+  // 1. Pre-processing: Grayscale & Contrast Stretching
+  let min = 255, max = 0;
   for (let i = 0; i < data.length; i += 4) {
-    const g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    // Standard Luma coefficients for precise grayscale
+    const g = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
     gray[i / 4] = g;
     if (g < min) min = g;
     if (g > max) max = g;
   }
 
-  // Normalize grayscale (Contrast stretching)
+  // Auto-Contrast Stretch
   const range = max - min;
-  if (range > 0) {
-    for (let i = 0; i < gray.length; i++) {
-      gray[i] = ((gray[i] - min) / range) * 255;
+  const contrastFactor = range > 0 ? 255 / range : 1;
+  for (let i = 0; i < gray.length; i++) {
+    gray[i] = (gray[i] - min) * contrastFactor;
+  }
+
+  // 2. Compute Integral Image
+  const integralImage = new Float64Array(width * height);
+  for (let x = 0; x < width; x++) {
+    let colSum = 0;
+    for (let y = 0; y < height; y++) {
+      const idx = y * width + x;
+      colSum += gray[idx];
+      integralImage[idx] = (x === 0 ? colSum : integralImage[idx - 1] + colSum);
     }
   }
 
-  // 2. Integral image
-  const integralImage = new Int32Array(width * height);
-  for (let i = 0; i < width; i++) {
-    let sum = 0;
-    for (let j = 0; j < height; j++) {
-      const index = j * width + i;
-      sum += gray[index];
-      if (i === 0) {
-        integralImage[index] = sum;
-      } else {
-        integralImage[index] = integralImage[index - 1] + sum;
-      }
-    }
-  }
+  // 3. Adaptive Thresholding Pass
+  const S = Math.max(8, Math.floor(width / 12));
+  const T = 0.15; // 15% sensitivity
 
-  // 3. Thresholding
-  const S = Math.floor(width / s);
-  const thresholdFactor = (100 - t) / 100;
-  
-  for (let i = 0; i < width; i++) {
-    for (let j = 0; j < height; j++) {
-      const index = j * width + i;
-      const x1 = Math.max(i - S / 2, 0);
-      const x2 = Math.min(i + S / 2, width - 1);
-      const y1 = Math.max(j - S / 2, 0);
-      const y2 = Math.min(j + S / 2, height - 1);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const idx = y * width + x;
+      const x1 = Math.max(x - S / 2, 0);
+      const x2 = Math.min(x + S / 2, width - 1);
+      const y1 = Math.max(y - S / 2, 0);
+      const y2 = Math.min(y + S / 2, height - 1);
+      
       const count = (x2 - x1) * (y2 - y1);
-      
-      const sum = integralImage[Math.floor(y2 * width + x2)] 
-                - integralImage[Math.floor(y1 * width + x2)] 
-                - integralImage[Math.floor(y2 * width + x1)] 
-                + integralImage[Math.floor(y1 * width + x1)];
+      const sum = integralImage[y2 * width + x2] 
+                - integralImage[y1 * width + x2] 
+                - integralImage[y2 * width + x1] 
+                + integralImage[y1 * width + x1];
 
-      // Sharp B&W
-      const val = (gray[index] * count < sum * thresholdFactor) ? 0 : 255;
+      const localMean = sum / count;
+      const val = (gray[idx] < localMean * (1.0 - T)) ? 0 : 255;
       
-      const outIndex = index * 4;
-      output[outIndex] = val;
-      output[outIndex + 1] = val;
-      output[outIndex + 2] = val;
-      output[outIndex + 3] = 255;
+      const outIdx = idx * 4;
+      output[outIdx] = output[outIdx + 1] = output[outIdx + 2] = val;
+      output[outIdx + 3] = 255;
     }
   }
 
