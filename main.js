@@ -39,10 +39,10 @@ function setupElements() {
         'project-list-view', 'form-view', 'project-list', 'tabs', 'fab-plus', 
         'btn-back', 'type-modal', 'project-detail-view', 'detail-summary-text',
         'bulk-action-bar', 'selected-count', 'btn-bulk-pdf-exec', 'btn-cancel-select',
-        'btn-select-mode', 'editor-container', 'scanner-overlay', 'scanner-image',
+        'editor-container', 'scanner-overlay', 'scanner-image',
         'btn-scanner-cancel', 'btn-scanner-done', 'btn-scanner-rotate', 'btn-scanner-filter',
         'document-preview-overlay', 'preview-canvas-container', 'btn-close-preview', 'btn-preview-pdf-out',
-        'form-page-title'
+        'form-page-title', 'bot-container', 'fab-bot', 'btn-close-bot', 'btn-send-bot', 'bot-input', 'bot-messages'
     ];
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -54,6 +54,7 @@ function setupElements() {
 async function init() {
     await renderList();
     bindGlobalEvents();
+    bindBotEvents();
 }
 
 // --- List View Logic ---
@@ -337,7 +338,6 @@ function bindGlobalEvents() {
     ['kanryo', 'marusan', 'geppo'].forEach(type => { document.getElementById(`btn-new-${type}`).onclick = () => showForm(type); });
     if (els['btn-back']) els['btn-back'].onclick = () => { if (confirm('戻りますか？')) { els['form-view'].classList.add('hidden'); els['project-list-view'].classList.remove('hidden'); renderList(); } };
     if (els.tabsList) els.tabsList.forEach(tab => { tab.onclick = () => { els.tabsList.forEach(t => t.classList.remove('active')); tab.classList.add('active'); currentTab = tab.dataset.tab; renderList(); }; });
-    if (els['btn-select-mode']) els['btn-select-mode'].onclick = () => { isSelectionMode = !isSelectionMode; if (!isSelectionMode) selectedIds.clear(); renderList(); };
     if (els['btn-cancel-select']) els['btn-cancel-select'].onclick = () => exitSelectionMode();
     if (els['btn-bulk-pdf-exec']) els['btn-bulk-pdf-exec'].onclick = handleBulkPdf;
 }
