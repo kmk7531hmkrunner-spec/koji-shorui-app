@@ -1,3 +1,12 @@
+// --- Mobile Error Debugger ---
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:rgba(255,0,0,0.9);color:white;padding:10px;z-index:9999;font-size:12px;word-break:break-all;';
+    div.innerHTML = `⚠️ Error: ${msg}<br>Line: ${lineNo}<br>${url}`;
+    document.body.appendChild(div);
+    return false;
+};
+
 import { getAllProjects, saveProject, deleteProject, getProject, generateDraftName } from './src/storage.js';
 import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
