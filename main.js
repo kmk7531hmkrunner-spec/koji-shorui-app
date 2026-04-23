@@ -3,7 +3,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Final Verified Professional Build)...");
+console.log("Main script loading (Intelligent Workflow Build)...");
 
 // --- State ---
 let currentTab = 'draft';
@@ -127,15 +127,23 @@ async function showProjectDetail(id) {
     const fd = p.formData || {};
     if (els['detail-summary-text']) {
         els['detail-summary-text'].innerHTML = `
+            <div><strong>状態:</strong> ${p.status === 'draft' ? '下書き' : '提出済み'}</div>
             <div><strong>日付:</strong> ${p.date || '未設定'}</div>
             <div><strong>会社名:</strong> ${fd.companyName || '-'}</div>
             <div><strong>監督名:</strong> ${fd.supervisorName || '-'}</div>
-            <div><strong>作業者:</strong> ${p.workerName || '-'}</div>
         `;
     }
+    
+    // Action Buttons Filtering
+    const btnPdf = document.getElementById('btn-detail-pdf');
+    if (btnPdf) {
+        // If status is 'sent', hide the PDF creation button as requested
+        btnPdf.style.display = p.status === 'sent' ? 'none' : 'block';
+        btnPdf.onclick = () => { els['project-detail-view'].classList.add('hidden'); generatePdf(id); };
+    }
+
     if (els['project-detail-view']) els['project-detail-view'].classList.remove('hidden');
     
-    document.getElementById('btn-detail-pdf').onclick = () => { els['project-detail-view'].classList.add('hidden'); generatePdf(id); };
     document.getElementById('btn-detail-edit').onclick = () => { els['project-detail-view'].classList.add('hidden'); showForm(p.type, p); };
     document.getElementById('btn-detail-delete').onclick = () => { if (confirm('本当に削除しますか？')) { els['project-detail-view'].classList.add('hidden'); handleDeleteProject(id); } };
     document.getElementById('btn-close-detail').onclick = () => els['project-detail-view'].classList.add('hidden');
@@ -307,7 +315,10 @@ async function handleShowPreview() {
     const canvas = await drawProjectToCanvas(currentProject, bgUrl, config);
     els['preview-canvas-container'].innerHTML = '';
     els['preview-canvas-container'].appendChild(canvas);
-    els['btn-preview-pdf-out'].onclick = async () => { overlay.classList.add('hidden'); await generateSinglePdf(currentProject, bgUrl, config); };
+    els['btn-preview-pdf-out'].onclick = async () => { 
+        overlay.classList.add('hidden'); 
+        await generatePdf(currentProject.id); // Trigger PDF and Move to Sent
+    };
     els['btn-close-preview'].onclick = () => overlay.classList.add('hidden');
 }
 
@@ -324,12 +335,26 @@ function bindGlobalEvents() {
 
 async function handleBulkPdf() {
     const projects = [];
-    for (const id of selectedIds) { const p = await getProject(id); if (p) projects.push(p); }
+    for (const id of selectedIds) { 
+        const p = await getProject(id); 
+        if (p) projects.push(p); 
+    }
     const config = await getPdfConfig();
     const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
     const doc = await generateBulkPdf(projects, templates, config);
     doc.save(`bulk_${Date.now()}.pdf`);
+    
+    // Automatically move all generated projects to 'sent'
+    for (const p of projects) {
+        if (p.status === 'draft') {
+            p.status = 'sent';
+            await saveProject(p);
+        }
+    }
+    
     exitSelectionMode();
+    renderList();
+    alert('一括出力が完了し、データを「完了」へ移動しました');
 }
 
 async function startScanner(file) {
@@ -369,6 +394,14 @@ async function generatePdf(id) {
     const config = await getPdfConfig();
     const doc = await generateSinglePdf(p, bgUrl, config);
     doc.save(`${p.displayTitle}.pdf`);
+    
+    // Automatically move to 'sent' after individual PDF output
+    if (p.status === 'draft') {
+        p.status = 'sent';
+        await saveProject(p);
+        renderList();
+        alert('PDFを作成しました。データを「完了」へ移動しました');
+    }
 }
 
 function showErrorOverlay(err) { document.body.insertAdjacentHTML('afterbegin', `<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:red;padding:20px;z-index:9999;"><h2>Fatal Error</h2><pre>${err.stack}</pre></div>`); }
