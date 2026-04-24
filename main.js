@@ -250,26 +250,11 @@ function renderKanryoFields() {
     return `
         <div class="form-section">
             <h3 class="section-title">基本情報</h3>
-            <div class="form-group highlight-box"><label class="label">📅 実施日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
-            <div class="form-group"><label class="label">会社名</label><input type="text" id="field-companyName" value="${fd.companyName || ''}" placeholder="会社名"></div>
-            <div class="form-group"><label class="label">注文番号</label><input type="text" id="field-orderNumber" value="${fd.orderNumber || ''}" placeholder="注文番号"></div>
-            <div class="form-group"><label class="label">作業者</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="作業者"></div>
-            <div class="form-group"><label class="label">応援者</label><div id="support-chip-group" class="chip-group">
-                ${['湧', '菊', '須', '田', '大', '下', '巻', '木', 'タン', '富'].map(name => {
-                    const isActive = (fd.supportName || []).includes(name);
-                    return `<button type="button" class="chip-btn ${isActive ? 'active' : ''}" data-name="${name}">${name}</button>`;
-                }).join('')}
-            </div></div>
-        </div>
-        <div class="form-section">
-            <h3 class="section-title">現場情報</h3>
-            <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名"></div>
-            <div class="form-group"><label class="label">現場名(詳細)</label><input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="事業所名など"></div>
-            <div class="form-group"><label class="label">監督名</label><input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="監督名"></div>
-            <div class="form-group"><label class="label">住所</label><input type="text" id="field-address" value="${fd.address || ''}" placeholder="住所"></div>
-        </div>
-        <div class="form-section">
-            <h3 class="section-title">進捗・記録</h3>
+            <div class="form-group"><label class="label">👤 作業者名</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="作業者名を入力"></div>
+            <div class="form-group highlight-box"><label class="label">📅 日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
+            <div class="form-group"><label class="label">会社名</label><input type="text" id="field-companyName" value="${fd.companyName || ''}" placeholder="会社名を入力"></div>
+            <div class="form-group"><label class="label">事業所名</label><input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="（主にAHCの時）"></div>
+            <div class="form-group"><label class="label">担当者名</label><input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="（監督）"></div>
             <div class="form-group"><label class="label">訪問回数</label><select id="field-visitCount">
                 <option value="1" ${fd.visitCount === '1' ? 'selected' : ''}>1回目</option>
                 <option value="2" ${fd.visitCount === '2' ? 'selected' : ''}>2回目</option>
@@ -279,24 +264,39 @@ function renderKanryoFields() {
                 <option value="done" ${fd.completionStatus === 'done' ? 'selected' : ''}>完了</option>
                 <option value="notYet" ${fd.completionStatus === 'notYet' ? 'selected' : ''}>未</option>
             </select></div>
-            <div class="form-group"><label class="label">工事内容</label><textarea id="field-content" rows="4" placeholder="工事内容">${fd.content || ''}</textarea></div>
-            <div class="form-group"><label class="label">日報</label><textarea id="field-dailyReport" rows="4" placeholder="日報">${fd.dailyReport || ''}</textarea></div>
+            <div class="form-group"><label class="label">応援選択</label><div id="support-chip-group" class="chip-group">
+                ${['湧', '菊', '須', '田', '大', '下', '巻', '木', 'タン', '富'].map(name => {
+                    const isActive = (fd.supportName || []).includes(name);
+                    return `<button type="button" class="chip-btn ${isActive ? 'active' : ''}" data-name="${name}">${name}</button>`;
+                }).join('')}
+            </div></div>
         </div>
         <div class="form-section">
-            <h3 class="section-title">経費</h3>
+            <h3 class="section-title">経費・領収書</h3>
             <div class="form-group"><label class="label">駐車場代</label>
                 <div class="receipt-action-unit">
-                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="金額を入力">
+                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="（丸産技研は材料代に記入）">
                     <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt" style="margin:0;">📸 撮影</button>
                     <div id="receipt-preview-mini" class="receipt-mini-preview" onclick="handleReEditReceipt()">
                         ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}">` : '<span style="font-size:10px; color:#94a3b8;">未撮影</span>'}
                     </div>
                 </div>
             </div>
-            <div class="form-group"><label class="label">高速代</label><input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}"></div>
-            <div class="form-group"><label class="label">材料代</label><input type="number" id="field-materialFee" value="${fd.materialFee || ''}"></div>
-            <div class="form-group"><label class="label">合計額</label><input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}"></div>
-            <div class="form-group"><label class="label">消費税額</label><input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}"></div>
+            <div class="form-group"><label class="label">高速代</label><input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="（この現場に行くのに使った分）"></div>
+            <div class="form-group"><label class="label">材料代</label><input type="number" id="field-materialFee" value="${fd.materialFee || ''}" placeholder="（丸産駐車場はここに書く）"></div>
+        </div>
+        <div class="form-section">
+            <h3 class="section-title">現場詳細</h3>
+            <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名を入力"></div>
+            <div class="form-group"><label class="label">注文番号</label><input type="text" id="field-orderNumber" value="${fd.orderNumber || ''}" placeholder="（アクシア9桁、AHC英字＋5桁、三井10桁）"></div>
+            <div class="form-group"><label class="label">住所</label><input type="text" id="field-address" value="${fd.address || ''}" placeholder="住所を入力"></div>
+        </div>
+        <div class="form-section">
+            <h3 class="section-title">作業内容・報告</h3>
+            <div class="form-group"><label class="label">工事内容</label><textarea id="field-content" rows="4" placeholder="（開始終了時間、建新計数、多く使った材料）">${fd.content || ''}</textarea></div>
+            <div class="form-group"><label class="label">日報</label><textarea id="field-dailyReport" rows="4" placeholder="（現場日誌）">${fd.dailyReport || ''}</textarea></div>
+            <div class="form-group"><label class="label">合計額</label><input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}" placeholder="（アクシア、OTOなど）"></div>
+            <div class="form-group"><label class="label">消費税</label><input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}" placeholder="消費税を入力"></div>
         </div>
     `;
 }
@@ -305,10 +305,18 @@ function renderMarusanFields() {
     const fd = currentProject.formData || {};
     return `
         <div class="form-section">
-            <h3 class="section-title">報告内容</h3>
-            <div class="form-group highlight-box"><label class="label">📅 実施日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
+            <h3 class="section-title">丸産報告書 入力</h3>
+            <div class="form-group highlight-box"><label class="label">📅 日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
+            <div class="form-group"><label class="label">担当者名</label><input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="監督名を入力"></div>
             <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名を入力"></div>
-            <div class="form-group"><label class="label">工事内容</label><textarea id="field-content" rows="6" placeholder="詳細な工事内容を記入してください">${fd.content || ''}</textarea></div>
+            <div class="flex-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label class="label">開始時間</label><input type="time" id="field-startTime" value="${fd.startTime || ''}"></div>
+                <div class="form-group" style="flex:1;"><label class="label">終了時間</label><input type="time" id="field-endTime" value="${fd.endTime || ''}"></div>
+            </div>
+            <div class="form-group"><label class="label">作業内容</label><textarea id="field-content" rows="6" placeholder="作業内容を詳細に記入してください">${fd.content || ''}</textarea></div>
+            <div class="form-group"><label class="label">作業者</label>
+                <input type="text" id="field-worker1" value="${fd.worker1 || ''}" placeholder="作業者名を入力">
+            </div>
         </div>
     `;
 }

@@ -1,4 +1,5 @@
-import { get, set } from 'idb-keyval';
+// Use a more resilient import for idb-keyval that works in various environments
+import { get, set } from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
 
 /**
  * PDF Layout Configuration
