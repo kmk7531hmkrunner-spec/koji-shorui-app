@@ -94,7 +94,7 @@ async function renderList() {
                     </div>
                 </div>
                 <div class="project-card-actions">
-                    ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="generatePdf('${p.id}')">📄<br>PDF</button>` : ''}
+                    ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="window.confirmGeneratePdf('${p.id}')">📄<br>PDF</button>` : ''}
                     <button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>編集</button>
                     <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
                 </div>
@@ -171,6 +171,12 @@ window.handleCardPreview = async (id) => {
         };
     }
     document.getElementById('btn-close-preview').onclick = () => overlay.classList.add('hidden');
+};
+
+window.confirmGeneratePdf = (id) => {
+    if (confirm('この書類をPDF出力し、「完了」へ移動しますか？')) {
+        generatePdf(id);
+    }
 };
 
 window.editProject = async (id) => {
@@ -278,19 +284,19 @@ function renderKanryoFields() {
         </div>
         <div class="form-section">
             <h3 class="section-title">経費</h3>
-            <div class="form-group"><label class="label">駐車場代</label><div class="flex-row" style="display:flex;gap:8px;">
-                <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" style="flex:1;"><button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt">📸 スキャン</button>
-            </div></div>
+            <div class="form-group"><label class="label">駐車場代</label>
+                <div class="receipt-action-unit">
+                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="金額を入力">
+                    <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt" style="margin:0;">📸 撮影</button>
+                    <div id="receipt-preview-mini" class="receipt-mini-preview" onclick="handleReEditReceipt()">
+                        ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}">` : '<span style="font-size:10px; color:#94a3b8;">未撮影</span>'}
+                    </div>
+                </div>
+            </div>
             <div class="form-group"><label class="label">高速代</label><input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}"></div>
             <div class="form-group"><label class="label">材料代</label><input type="number" id="field-materialFee" value="${fd.materialFee || ''}"></div>
             <div class="form-group"><label class="label">合計額</label><input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}"></div>
             <div class="form-group"><label class="label">消費税額</label><input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}"></div>
-        </div>
-        <div class="form-group photo-upload-box">
-            <label class="label">📸 領収書の確認</label>
-            <div id="receipt-preview" class="receipt-preview-container" onclick="handleReEditReceipt()">
-                ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}">` : '<div class="placeholder">領収書がここに表示されます</div>'}
-            </div>
         </div>
     `;
 }
@@ -299,9 +305,10 @@ function renderMarusanFields() {
     const fd = currentProject.formData || {};
     return `
         <div class="form-section">
+            <h3 class="section-title">報告内容</h3>
             <div class="form-group highlight-box"><label class="label">📅 実施日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
-            <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}"></div>
-            <div class="form-group"><label class="label">工事内容</label><textarea id="field-content" rows="5">${fd.content || ''}</textarea></div>
+            <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名を入力"></div>
+            <div class="form-group"><label class="label">工事内容</label><textarea id="field-content" rows="6" placeholder="詳細な工事内容を記入してください">${fd.content || ''}</textarea></div>
         </div>
     `;
 }
@@ -310,9 +317,10 @@ function renderGeppoFields() {
     const fd = currentProject.formData || {};
     return `
         <div class="form-section">
+            <h3 class="section-title">月報情報</h3>
             <div class="form-group highlight-box"><label class="label">📅 対象年月</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
-            <div class="form-group"><label class="label">氏名</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}"></div>
-            <div class="form-group"><label class="label">まとめ</label><textarea id="field-summary" rows="10">${fd.summary || ''}</textarea></div>
+            <div class="form-group"><label class="label">氏名</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="氏名を入力"></div>
+            <div class="form-group"><label class="label">業務まとめ</label><textarea id="field-summary" rows="12" placeholder="今月の業務内容や気づきを記入してください">${fd.summary || ''}</textarea></div>
         </div>
     `;
 }
@@ -352,8 +360,10 @@ async function handleShowPreview() {
     els['preview-canvas-container'].innerHTML = '';
     els['preview-canvas-container'].appendChild(canvas);
     els['btn-preview-pdf-out'].onclick = async () => { 
-        overlay.classList.add('hidden'); 
-        await generatePdf(currentProject.id); // Trigger PDF and Move to Sent
+        if (confirm('このプレビュー内容でPDFを作成しますか？')) {
+            overlay.classList.add('hidden'); 
+            await generatePdf(currentProject.id); 
+        }
     };
     els['btn-close-preview'].onclick = () => overlay.classList.add('hidden');
 }
@@ -362,13 +372,14 @@ function bindGlobalEvents() {
     if (els['fab-plus']) els['fab-plus'].onclick = () => els['type-modal'].style.display = 'flex';
     document.getElementById('btn-close-modal').onclick = () => els['type-modal'].style.display = 'none';
     ['kanryo', 'marusan', 'geppo'].forEach(type => { document.getElementById(`btn-new-${type}`).onclick = () => showForm(type); });
-    if (els['btn-back']) els['btn-back'].onclick = () => { if (confirm('戻りますか？')) { els['form-view'].classList.add('hidden'); els['project-list-view'].classList.remove('hidden'); renderList(); } };
+    if (els['btn-back']) els['btn-back'].onclick = () => { if (confirm('作業中の内容は破棄されますが、戻りますか？')) { els['form-view'].classList.add('hidden'); els['project-list-view'].classList.remove('hidden'); renderList(); } };
     if (els.tabsList) els.tabsList.forEach(tab => { tab.onclick = () => { els.tabsList.forEach(t => t.classList.remove('active')); tab.classList.add('active'); currentTab = tab.dataset.tab; renderList(); }; });
     if (els['btn-cancel-select']) els['btn-cancel-select'].onclick = () => exitSelectionMode();
     if (els['btn-bulk-pdf-exec']) els['btn-bulk-pdf-exec'].onclick = handleBulkPdf;
 }
 
 async function handleBulkPdf() {
+    if (!confirm(`${selectedIds.size}件の書類を一括でPDF作成しますか？`)) return;
     const projects = [];
     for (const id of selectedIds) { 
         const p = await getProject(id); 
@@ -389,7 +400,7 @@ async function handleBulkPdf() {
     
     exitSelectionMode();
     renderList();
-    alert('一括出力が完了し、データを「完了」へ移動しました');
+    alert('一括出力が完了しました');
 }
 
 async function startScanner(file) {
