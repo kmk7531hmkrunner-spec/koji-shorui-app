@@ -79,16 +79,24 @@ async function renderList() {
         
         return `
             <div class="project-card ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
-                <div class="project-card-header">
-                    <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
-                    <span class="project-date">📅 ${dateStr}</span>
+                <div class="project-card-body">
+                    <div class="project-card-header">
+                        <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
+                        <span class="project-date">📅 ${dateStr}</span>
+                    </div>
+                    <div class="project-main-info">
+                        <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
+                        <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+                    </div>
+                    <div class="project-card-footer">
+                        <span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>
+                        <span class="card-hint">タップでプレビュー確認</span>
+                    </div>
                 </div>
-                <div class="project-main-info">
-                    <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
-                    <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
-                </div>
-                <div class="project-card-footer">
-                    <span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>
+                <div class="project-card-actions">
+                    ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="generatePdf('${p.id}')">📄<br>PDF</button>` : ''}
+                    <button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>編集</button>
+                    <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
                 </div>
             </div>
         `;
@@ -101,7 +109,15 @@ async function renderList() {
             longPressTimeout = setTimeout(() => { isLongPressAction = true; enterSelectionMode(id); }, 700);
         };
         const end = () => clearTimeout(longPressTimeout);
-        const click = () => { if (isLongPressAction) return; if (isSelectionMode) toggleSelection(id); else showProjectDetail(id); };
+        const click = (e) => { 
+            if (isLongPressAction) return; 
+            if (isSelectionMode) {
+                toggleSelection(id); 
+            } else {
+                if (e.target.closest('.card-action-btn')) return; // Action buttons handle their own clicks
+                window.handleCardPreview(id);
+            }
+        };
         card.addEventListener('touchstart', start, {passive: true});
         card.addEventListener('touchend', end, {passive: true});
         card.addEventListener('mousedown', start);
@@ -119,46 +135,56 @@ function exitSelectionMode() { isSelectionMode = false; selectedIds.clear(); ren
 function updateSelectionUI() {
     if (!els['bulk-action-bar']) return;
     if (isSelectionMode) {
-        els['bulk-action-bar'].classList.remove('hidden');
+        els['bulk-action-bar'].classList.add('active');
         els['selected-count'].textContent = `${selectedIds.size} 件選択中`;
         els['fab-plus'].classList.add('hidden');
     } else {
-        els['bulk-action-bar'].classList.add('hidden');
+        els['bulk-action-bar'].classList.remove('active');
         els['fab-plus'].classList.remove('hidden');
     }
 }
 
-// --- Detail View Logic ---
+// --- Preview & Action Logic ---
 
-async function showProjectDetail(id) {
+window.handleCardPreview = async (id) => {
     const p = await getProject(id);
     if (!p) return;
-    currentProject = p;
-    const fd = p.formData || {};
-    if (els['detail-summary-text']) {
-        els['detail-summary-text'].innerHTML = `
-            <div><strong>状態:</strong> ${p.status === 'draft' ? '下書き' : '提出済み'}</div>
-            <div><strong>日付:</strong> ${p.date || '未設定'}</div>
-            <div><strong>会社名:</strong> ${fd.companyName || '-'}</div>
-            <div><strong>監督名:</strong> ${fd.supervisorName || '-'}</div>
-        `;
-    }
+    const overlay = els['document-preview-overlay'];
+    overlay.classList.remove('hidden');
     
-    // Action Buttons Filtering
-    const btnPdf = document.getElementById('btn-detail-pdf');
+    // Set a loading text temporarily
+    els['preview-canvas-container'].innerHTML = '<div class="loading">プレビュー画像を生成中...</div>';
+    
+    const bgUrl = p.type === 'kanryo' ? '/images/kanrryoutemp.jpg' : (p.type === 'marusan' ? '/images/marusan_report.jpg' : '/images/geppo.jpg');
+    const config = await getPdfConfig();
+    const canvas = await drawProjectToCanvas(p, bgUrl, config);
+    
+    els['preview-canvas-container'].innerHTML = '';
+    els['preview-canvas-container'].appendChild(canvas);
+    
+    const btnPdf = document.getElementById('btn-preview-pdf-out');
     if (btnPdf) {
-        // If status is 'sent', hide the PDF creation button as requested
         btnPdf.style.display = p.status === 'sent' ? 'none' : 'block';
-        btnPdf.onclick = () => { els['project-detail-view'].classList.add('hidden'); generatePdf(id); };
+        btnPdf.onclick = async () => { 
+            overlay.classList.add('hidden'); 
+            await generatePdf(p.id); 
+        };
     }
+    document.getElementById('btn-close-preview').onclick = () => overlay.classList.add('hidden');
+};
 
-    if (els['project-detail-view']) els['project-detail-view'].classList.remove('hidden');
-    
-    document.getElementById('btn-detail-edit').onclick = () => { els['project-detail-view'].classList.add('hidden'); showForm(p.type, p); };
-    document.getElementById('btn-detail-delete').onclick = () => { if (confirm('本当に削除しますか？')) { els['project-detail-view'].classList.add('hidden'); handleDeleteProject(id); } };
-    document.getElementById('btn-close-detail').onclick = () => els['project-detail-view'].classList.add('hidden');
-}
+window.editProject = async (id) => {
+    const p = await getProject(id);
+    if (p) showForm(p.type, p);
+};
 
+window.confirmDeleteProject = (id) => {
+    if (confirm('本当にこのデータを削除しますか？\n削除すると復元できません。')) {
+        handleDeleteProject(id);
+    }
+};
+
+// Remove old showProjectDetail since it's replaced by handleCardPreview and inline buttons
 // --- Form Logic ---
 
 function showForm(type, project = null) {
@@ -416,7 +442,64 @@ async function generatePdf(id) {
 function showErrorOverlay(err) { document.body.insertAdjacentHTML('afterbegin', `<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:red;padding:20px;z-index:9999;"><h2>Fatal Error</h2><pre>${err.stack}</pre></div>`); }
 
 function bindBotEvents() {
-    if (els['fab-bot']) els['fab-bot'].onclick = () => els['bot-container'].classList.toggle('hidden');
+    const fabBot = els['fab-bot'];
+    if (fabBot) {
+        let isDragging = false;
+        let hasMoved = false;
+        let startX, startY, initialX, initialY;
+
+        const startDrag = (e) => {
+            isDragging = true;
+            hasMoved = false;
+            const touch = e.type.includes('mouse') ? e : e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            const rect = fabBot.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+            fabBot.style.transition = 'none';
+        };
+
+        const moveDrag = (e) => {
+            if (!isDragging) return;
+            const touch = e.type.includes('mouse') ? e : e.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            
+            // If moved more than 5px, consider it a drag
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                hasMoved = true;
+                e.preventDefault(); // Prevent scroll while dragging
+            }
+            
+            if (hasMoved) {
+                fabBot.style.left = `${initialX + dx}px`;
+                fabBot.style.top = `${initialY + dy}px`;
+                fabBot.style.bottom = 'auto';
+                fabBot.style.right = 'auto';
+            }
+        };
+
+        const endDrag = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            fabBot.style.transition = 'all 0.3s ease';
+        };
+
+        fabBot.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', moveDrag, {passive: false});
+        document.addEventListener('mouseup', endDrag);
+
+        fabBot.addEventListener('touchstart', startDrag, {passive: true});
+        document.addEventListener('touchmove', moveDrag, {passive: false});
+        document.addEventListener('touchend', endDrag);
+
+        fabBot.onclick = (e) => {
+            if (hasMoved) { e.preventDefault(); return; }
+            els['bot-container'].classList.toggle('hidden');
+        };
+    }
+    
     if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
     if (els['btn-send-bot']) els['btn-send-bot'].onclick = () => {
         const msg = els['bot-input'].value.trim(); if (!msg) return;
