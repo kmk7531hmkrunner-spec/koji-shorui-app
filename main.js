@@ -52,9 +52,20 @@ function setupElements() {
 }
 
 async function init() {
-    await renderList();
+    // 1. Immediately bind events to ensure UI responsiveness
     bindGlobalEvents();
     bindBotEvents();
+    
+    // 2. Load and render list in background
+    try {
+        await renderList();
+    } catch (err) {
+        console.error("List render failed", err);
+        // Don't crash the whole app if list fails
+        if (els['project-list']) {
+            els['project-list'].innerHTML = '<div class="error-msg">データの読み込みに失敗しました。再起動してください。</div>';
+        }
+    }
 }
 
 // --- List View Logic ---
@@ -420,18 +431,23 @@ async function handleShowPreview() {
 }
 
 function bindGlobalEvents() {
-    if (els['fab-plus']) els['fab-plus'].onclick = () => els['type-modal'].style.display = 'flex';
-    document.getElementById('btn-close-modal').onclick = () => els['type-modal'].style.display = 'none';
+    const safeBind = (id, event, handler) => {
+        const el = document.getElementById(id);
+        if (el) el[event] = handler;
+        else console.warn(`Element not found for binding: ${id}`);
+    };
+
+    if (els['fab-plus']) els['fab-plus'].onclick = () => { if(els['type-modal']) els['type-modal'].style.display = 'flex'; };
+    safeBind('btn-close-modal', 'onclick', () => { if(els['type-modal']) els['type-modal'].style.display = 'none'; });
     
     ['kanryo', 'marusan', 'geppo'].forEach(type => { 
-        const btn = document.getElementById(`btn-new-${type}`);
-        if (btn) btn.onclick = () => showForm(type); 
+        safeBind(`btn-new-${type}`, 'onclick', () => showForm(type)); 
     });
 
     if (els['btn-back']) els['btn-back'].onclick = () => { 
         if (confirm('作業中の内容は破棄されますが、戻りますか？')) { 
-            els['form-view'].classList.add('hidden'); 
-            els['project-list-view'].classList.remove('hidden'); 
+            if(els['form-view']) els['form-view'].classList.add('hidden'); 
+            if(els['project-list-view']) els['project-list-view'].classList.remove('hidden'); 
             renderList(); 
         } 
     };
@@ -447,8 +463,7 @@ function bindGlobalEvents() {
         });
     }
 
-    const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
-    if (bulkBtn) bulkBtn.onclick = handleBulkPdf;
+    safeBind('btn-bulk-pdf-exec', 'onclick', handleBulkPdf);
 }
 
 function updateSelectionUI() {
