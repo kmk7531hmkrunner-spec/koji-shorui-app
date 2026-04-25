@@ -313,7 +313,10 @@ function renderMarusanFields() {
         <div class="form-section">
             <h3 class="section-title">丸産報告書 入力</h3>
             <div class="form-group highlight-box"><label class="label">📅 日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
-            <div class="form-group"><label class="label">担当者名</label><input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="山田→正裕/拓実　佐藤→裕翔/祐亮"></div>
+            <div class="form-group">
+                <label class="label">担当者名 <span class="label-hint">山田→正裕/拓実　佐藤→裕翔/祐亮</span></label>
+                <input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="担当者名を入力">
+            </div>
             <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名を入力"></div>
             <div class="flex-row" style="display:flex; gap:10px;">
                 <div class="form-group" style="flex:1;"><label class="label">開始時間</label><input type="time" id="field-startTime" value="${fd.startTime || ''}"></div>

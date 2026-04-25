@@ -393,10 +393,20 @@ body {
   margin-right: 8px;
 }
 
+.label-hint {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--accent-gold);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
 /* Form View specific */
 .form-view {
   padding: 1rem;
-  padding-bottom: 250px; /* 大幅に確保してキーボード表示時も見切れないようにする */
+  padding-bottom: 350px; /* さらに増やして確実にスクロール可能にする */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .btn-search-link {
