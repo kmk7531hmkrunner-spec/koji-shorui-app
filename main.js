@@ -180,19 +180,6 @@ function enterSelectionMode(firstId) { isSelectionMode = true; selectedIds.add(f
 function toggleSelection(id) { if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); if (selectedIds.size === 0) exitSelectionMode(); else renderList(); }
 function exitSelectionMode() { isSelectionMode = false; selectedIds.clear(); renderList(); }
 
-function updateSelectionUI() {
-    const bulkContainer = document.getElementById('top-bulk-container');
-    if (!bulkContainer) return;
-    
-    if (isSelectionMode && selectedIds.size > 0) {
-        bulkContainer.classList.remove('hidden');
-        if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
-    } else {
-        bulkContainer.classList.add('hidden');
-        if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
-    }
-}
-
 // --- Preview & Action Logic ---
 
 window.handleCardPreview = async (id) => {
