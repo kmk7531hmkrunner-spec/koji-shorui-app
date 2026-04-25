@@ -24,19 +24,26 @@ let longPressTimeout = null;
 let isLongPressAction = false;
 
 // --- Initialization ---
-function startApp() {
-    if (window.logBoot) window.logBoot("Starting App Logic...");
+async function startApp() {
+    if (window.logBoot) window.logBoot("Starting App Logic (Harden Build)...");
     try {
+        if (window.logBoot) window.logBoot("Stage 1: Setup Elements");
         setupElements();
-        init();
+        
+        if (window.logBoot) window.logBoot("Stage 2: Initialize Features");
+        await init();
+        
+        if (window.logBoot) window.logBoot("Stage 3: App Boot Successful");
     } catch (err) {
-        console.error("Critical: Init failed", err);
-        showErrorOverlay(err);
+        if (window.logBoot) window.logBoot("BOOT CRASH: " + err.message);
+        console.error("Critical: App start failed", err);
+        // This will be caught by the unhandledrejection or the manual catch
+        throw err; 
     }
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startApp);
+    document.addEventListener('DOMContentLoaded', () => startApp());
 } else {
     startApp();
 }
