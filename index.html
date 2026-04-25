@@ -142,7 +142,29 @@
         </div>
     </div> <!-- end #app -->
 
+    <!-- Startup Debugger -->
+    <script>
+        window.APP_STARTUP_LOG = ["System boot started"];
+        function logBoot(msg) {
+            window.APP_STARTUP_LOG.push(msg);
+            console.log("[BOOT] " + msg);
+        }
+        window.addEventListener('error', function(e) {
+            const div = document.createElement('div');
+            div.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:rgba(255,0,0,0.9);color:white;padding:15px;z-index:99999;font-family:monospace;font-size:12px;';
+            div.innerHTML = '<strong>FATAL APP ERROR</strong><br>' + e.message + '<br>Line: ' + e.lineno + '<br>Log: ' + window.APP_STARTUP_LOG.join(' > ');
+            document.body.appendChild(div);
+        });
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script type="module" src="main.js"></script>
+    <script type="module">
+        logBoot("Main module loading...");
+        import("./main.js").then(() => {
+            logBoot("Main module loaded successfully.");
+        }).catch(err => {
+            logBoot("CRITICAL LOAD ERROR: " + err.message);
+            throw err;
+        });
+    </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import { jsPDF } from 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
 
 /**
  * Creates an image object from a URL/path and waits for it to load.

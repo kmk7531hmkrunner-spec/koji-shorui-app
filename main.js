@@ -25,6 +25,7 @@ let isLongPressAction = false;
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
+    if (window.logBoot) window.logBoot("DOM Content Loaded");
     try {
         setupElements();
         await init();
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupElements() {
+    if (window.logBoot) window.logBoot("Setting up elements...");
     const ids = [
         'project-list-view', 'form-view', 'project-list', 'tabs', 'fab-plus', 
         'btn-back', 'type-modal', 'project-detail-view', 'detail-summary-text',
@@ -46,22 +48,37 @@ function setupElements() {
     ];
     ids.forEach(id => {
         const el = document.getElementById(id);
-        if (el) els[id] = el;
+        if (el) {
+            els[id] = el;
+        } else {
+            console.warn(`Element #${id} missing from HTML`);
+        }
     });
     els.tabsList = document.querySelectorAll('.tab');
+    if (window.logBoot) window.logBoot(`Elements cached: ${Object.keys(els).length}`);
 }
 
 async function init() {
+    if (window.logBoot) window.logBoot("Initializing app features...");
     // 1. Immediately bind events to ensure UI responsiveness
-    bindGlobalEvents();
-    bindBotEvents();
+    try {
+        bindGlobalEvents();
+        if (window.logBoot) window.logBoot("Global events bound");
+        bindBotEvents();
+        if (window.logBoot) window.logBoot("Bot events bound");
+    } catch (e) {
+        if (window.logBoot) window.logBoot("EVENT BINDING FAILED: " + e.message);
+        throw e;
+    }
     
     // 2. Load and render list in background
     try {
+        if (window.logBoot) window.logBoot("Attempting to render list...");
         await renderList();
+        if (window.logBoot) window.logBoot("Initial list render complete");
     } catch (err) {
+        if (window.logBoot) window.logBoot("LIST RENDER FAILED: " + err.message);
         console.error("List render failed", err);
-        // Don't crash the whole app if list fails
         if (els['project-list']) {
             els['project-list'].innerHTML = '<div class="error-msg">データの読み込みに失敗しました。再起動してください。</div>';
         }
