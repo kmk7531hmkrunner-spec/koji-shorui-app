@@ -102,6 +102,13 @@ async function renderList() {
         `;
     }).join('');
 
+    // Handle Tap on Background to deselect
+    els['project-list'].onclick = (e) => {
+        if (isSelectionMode && !e.target.closest('.project-card')) {
+            exitSelectionMode();
+        }
+    };
+
     document.querySelectorAll('.project-card').forEach(card => {
         const id = card.dataset.id;
         const start = () => {
@@ -133,14 +140,15 @@ function toggleSelection(id) { if (selectedIds.has(id)) selectedIds.delete(id); 
 function exitSelectionMode() { isSelectionMode = false; selectedIds.clear(); renderList(); }
 
 function updateSelectionUI() {
-    if (!els['bulk-action-bar']) return;
-    if (isSelectionMode) {
-        els['bulk-action-bar'].classList.add('active');
-        els['selected-count'].textContent = `${selectedIds.size} 件選択中`;
-        els['fab-plus'].classList.add('hidden');
+    const bulkContainer = document.getElementById('top-bulk-container');
+    if (!bulkContainer) return;
+    
+    if (isSelectionMode && selectedIds.size > 0) {
+        bulkContainer.classList.remove('hidden');
+        if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
     } else {
-        els['bulk-action-bar'].classList.remove('active');
-        els['fab-plus'].classList.remove('hidden');
+        bulkContainer.classList.add('hidden');
+        if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
     }
 }
 
