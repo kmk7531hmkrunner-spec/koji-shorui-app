@@ -157,14 +157,9 @@
         });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script type="module" src="main.js"></script>
     <script type="module">
-        logBoot("Main module loading...");
-        import("./main.js").then(() => {
-            logBoot("Main module loaded successfully.");
-        }).catch(err => {
-            logBoot("CRITICAL LOAD ERROR: " + err.message);
-            throw err;
-        });
+        if (window.logBoot) logBoot("App module script attached.");
     </script>
 </body>
 </html>

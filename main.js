@@ -24,16 +24,22 @@ let longPressTimeout = null;
 let isLongPressAction = false;
 
 // --- Initialization ---
-document.addEventListener('DOMContentLoaded', async () => {
-    if (window.logBoot) window.logBoot("DOM Content Loaded");
+function startApp() {
+    if (window.logBoot) window.logBoot("Starting App Logic...");
     try {
         setupElements();
-        await init();
+        init();
     } catch (err) {
         console.error("Critical: Init failed", err);
         showErrorOverlay(err);
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+} else {
+    startApp();
+}
 
 function setupElements() {
     if (window.logBoot) window.logBoot("Setting up elements...");
