@@ -1,4 +1,3 @@
-// Use a more resilient import for idb-keyval that works in various environments
 import { get, set } from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
 
 /**
@@ -199,10 +198,10 @@ const DEFAULT_CONFIG = {
       {
         "id": "receipt",
         "label": "領収書貼り付け位置",
-        "x": 65.5,
-        "y": 48.0,
-        "width": 30,
-        "heightRatio": 1.4
+        "x": 57.318080357142854,
+        "y": 42.190536422698784,
+        "width": 34,
+        "heightRatio": 1.2
       }
     ]
   },

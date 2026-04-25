@@ -393,12 +393,30 @@ body {
   margin-right: 8px;
 }
 
-/* Form Styles */
-.form-container {
+/* Form View specific */
+.form-view {
   padding: 1rem;
+  padding-bottom: 250px; /* 大幅に確保してキーボード表示時も見切れないようにする */
+}
+
+.btn-search-link {
+    background-color: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
 }
 
 .form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-actions-bottom {
   margin-bottom: 1.25rem;
 }
 
@@ -494,7 +512,17 @@ input:focus, select:focus, textarea:focus {
     padding: 1.5rem;
     display: flex;
     justify-content: space-around;
-    background: rgba(0,0,0,0.8);
+    background: #f8fafc; /* 背景を明るい色に変更 */
+    border-top: 1px solid #cbd5e1;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.scanner-footer .btn-outline {
+    background: white;
+    border: 2px solid #cbd5e1;
+    color: #1e293b;
+    font-weight: 800;
 }
 
 /* Modal */
