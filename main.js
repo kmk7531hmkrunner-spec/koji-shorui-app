@@ -340,12 +340,38 @@ function renderMarusanFields() {
 
 function renderGeppoFields() {
     const fd = currentProject.formData || {};
+    let rowsHtml = '';
+    for (let i = 0; i < 30; i++) {
+        rowsHtml += `
+            <div class="geppo-row" style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+                <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                    <span style="font-weight:bold; color:var(--accent-gold); width:30px;">${i+1}</span>
+                    <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="日" style="width:50px;">
+                    <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}" placeholder="会社名" style="flex:2;">
+                    <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}" placeholder="監督名" style="flex:1;">
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}" placeholder="現場名" style="flex:1;">
+                    <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}" placeholder="住所" style="flex:1.5;">
+                </div>
+            </div>
+        `;
+    }
+
     return `
         <div class="form-section">
-            <h3 class="section-title">月報情報</h3>
-            <div class="form-group highlight-box"><label class="label">📅 対象年月</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
-            <div class="form-group"><label class="label">氏名</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="氏名を入力"></div>
-            <div class="form-group"><label class="label">業務まとめ</label><textarea id="field-summary" rows="12" placeholder="今月の業務内容や気づきを記入してください">${fd.summary || ''}</textarea></div>
+            <h3 class="section-title">月報 基本情報</h3>
+            <div class="flex-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label class="label">年</label><input type="number" id="field-geppo_year" value="${fd.geppo_year || new Date().getFullYear()}"></div>
+                <div class="form-group" style="flex:1;"><label class="label">月</label><input type="number" id="field-geppo_month" value="${fd.geppo_month || (new Date().getMonth() + 1)}"></div>
+            </div>
+            <div class="form-group"><label class="label">作業者</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="作業者名を入力"></div>
+        </div>
+        <div class="form-section" style="padding:0; overflow:hidden;">
+            <h3 class="section-title" style="margin: 15px;">勤務・現場記録 (30日分)</h3>
+            <div id="geppo-table-container">
+                ${rowsHtml}
+            </div>
         </div>
     `;
 }
@@ -393,17 +419,30 @@ async function handleShowPreview() {
     els['btn-close-preview'].onclick = () => overlay.classList.add('hidden');
 }
 
-function bindGlobalEvents() {
-    if (els['fab-plus']) els['fab-plus'].onclick = () => els['type-modal'].style.display = 'flex';
-    document.getElementById('btn-close-modal').onclick = () => els['type-modal'].style.display = 'none';
-    ['kanryo', 'marusan', 'geppo'].forEach(type => { document.getElementById(`btn-new-${type}`).onclick = () => showForm(type); });
-    if (els['btn-back']) els['btn-back'].onclick = () => { if (confirm('作業中の内容は破棄されますが、戻りますか？')) { els['form-view'].classList.add('hidden'); els['project-list-view'].classList.remove('hidden'); renderList(); } };
-    if (els.tabsList) els.tabsList.forEach(tab => { tab.onclick = () => { els.tabsList.forEach(t => t.classList.remove('active')); tab.classList.add('active'); currentTab = tab.dataset.tab; renderList(); }; });
-    if (els['btn-cancel-select']) els['btn-cancel-select'].onclick = () => exitSelectionMode();
-    if (els['btn-bulk-pdf-exec']) els['btn-bulk-pdf-exec'].onclick = handleBulkPdf;
+function updateSelectionUI() {
+    const bulkContainer = document.getElementById('top-bulk-container');
+    const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
+    if (!bulkContainer || !bulkBtn) return;
+    
+    if (isSelectionMode && selectedIds.size > 0) {
+        bulkBtn.textContent = `📄 ${selectedIds.size}件をまとめてPDFにする`;
+        if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
+    } else {
+        bulkBtn.textContent = `📄 複数選択してまとめてPDFを作成`;
+        if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
+    }
 }
 
 async function handleBulkPdf() {
+    if (!isSelectionMode) {
+        isSelectionMode = true;
+        renderList();
+        return;
+    }
+    if (selectedIds.size === 0) {
+        alert('作成する書類を1つ以上選択してください。');
+        return;
+    }
     if (!confirm(`${selectedIds.size}件の書類を一括でPDF作成しますか？`)) return;
     const projects = [];
     for (const id of selectedIds) { 

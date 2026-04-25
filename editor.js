@@ -184,6 +184,42 @@ function bindEvents() {
     addSafeListener(btnAlignLeft, 'click', () => updateSelectedField('align', 'left'));
     addSafeListener(btnAlignCenter, 'click', () => updateSelectedField('align', 'center'));
 
+    // Geppo Batch Copy
+    addSafeListener(document.getElementById('btn-geppo-batch-copy'), 'click', () => {
+        if (!selectedFieldId || !selectedFieldId.startsWith('row_')) return;
+        const type = editorTypeSelect.value;
+        const fields = currentLayoutConfig[type].fields;
+        const sourceField = fields.find(f => f.id === selectedFieldId);
+        if (!sourceField) return;
+
+        // Parse column name (e.g., 'day' from 'row_0_day')
+        const parts = selectedFieldId.split('_');
+        const colName = parts[2];
+
+        // Measure Y interval between row 0 and row 1
+        const r0 = fields.find(f => f.id === `row_0_${colName}`);
+        const r1 = fields.find(f => f.id === `row_1_${colName}`);
+        let interval = 2.5; // default
+        if (r0 && r1) interval = r1.y - r0.y;
+
+        if (confirm(`全ての「${sourceField.label.split(')')[1] || sourceField.label}」項目にこのレイアウトを適用し、縦に整列させますか？\n(間隔: ${interval.toFixed(1)}%)`)) {
+            fields.forEach(f => {
+                if (f.id.endsWith(`_${colName}`)) {
+                    const rowIndex = parseInt(f.id.split('_')[1]);
+                    f.x = sourceField.x;
+                    f.width = sourceField.width;
+                    f.fontSize = sourceField.fontSize;
+                    f.align = sourceField.align;
+                    // Auto-align Y based on interval from row 0
+                    const row0Field = fields.find(rf => rf.id === `row_0_${colName}`);
+                    if (row0Field) f.y = row0Field.y + (rowIndex * interval);
+                }
+            });
+            renderEditorCanvas(type);
+            alert('一括適用しました。');
+        }
+    });
+
     document.addEventListener('keydown', handleKeyboardMove);
 }
 
@@ -407,6 +443,12 @@ function updateSelectionUI() {
     if (selectedFieldId) {
         fieldSettings.classList.remove('hidden');
         noSelectionMsg.classList.add('hidden');
+        
+        // Show/Hide Geppo Batch Action Panel
+        const batchPanel = document.getElementById('geppo-batch-actions');
+        if (batchPanel) {
+            batchPanel.classList.toggle('hidden', !selectedFieldId.startsWith('row_'));
+        }
     } else {
         fieldSettings.classList.add('hidden');
         noSelectionMsg.classList.remove('hidden');
