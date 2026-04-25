@@ -419,6 +419,38 @@ async function handleShowPreview() {
     els['btn-close-preview'].onclick = () => overlay.classList.add('hidden');
 }
 
+function bindGlobalEvents() {
+    if (els['fab-plus']) els['fab-plus'].onclick = () => els['type-modal'].style.display = 'flex';
+    document.getElementById('btn-close-modal').onclick = () => els['type-modal'].style.display = 'none';
+    
+    ['kanryo', 'marusan', 'geppo'].forEach(type => { 
+        const btn = document.getElementById(`btn-new-${type}`);
+        if (btn) btn.onclick = () => showForm(type); 
+    });
+
+    if (els['btn-back']) els['btn-back'].onclick = () => { 
+        if (confirm('作業中の内容は破棄されますが、戻りますか？')) { 
+            els['form-view'].classList.add('hidden'); 
+            els['project-list-view'].classList.remove('hidden'); 
+            renderList(); 
+        } 
+    };
+
+    if (els.tabsList) {
+        els.tabsList.forEach(tab => { 
+            tab.onclick = () => { 
+                els.tabsList.forEach(t => t.classList.remove('active')); 
+                tab.classList.add('active'); 
+                currentTab = tab.dataset.tab; 
+                renderList(); 
+            }; 
+        });
+    }
+
+    const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
+    if (bulkBtn) bulkBtn.onclick = handleBulkPdf;
+}
+
 function updateSelectionUI() {
     const bulkContainer = document.getElementById('top-bulk-container');
     const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
