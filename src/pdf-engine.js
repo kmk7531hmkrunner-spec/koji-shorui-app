@@ -11,8 +11,11 @@ function loadImage(src) {
     img.onload = () => resolve(img);
     img.onerror = (e) => reject(new Error(`Failed to load image: ${src}`));
     
+    // Safety check for undefined/null src
+    if (!src) return reject(new Error(`Image source is undefined or null`));
+
     // Add cache buster only if it's not already a data URL
-    if (src.startsWith('data:')) {
+    if (String(src).startsWith('data:')) {
         img.src = src;
     } else {
         const separator = src.includes('?') ? '&' : '?';

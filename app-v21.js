@@ -840,9 +840,33 @@ async function handleBulkPdf() {
         modal.classList.add('hidden');
         
         const ids = Array.from(selectedIds);
-        await generateBulkPdf(ids, name, typeSelect.value);
+        const projects = [];
+        for (const id of ids) {
+            const p = await getProject(id);
+            if (p) projects.push(p);
+        }
+        const config = await getPdfConfig();
+        const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
+        
+        const doc = await generateBulkPdf(projects, templates, config);
+        
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        doc.save(`bulk_${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`);
+        
+        // Move to 'sent'
+        for (const p of projects) {
+            if (p.status === 'draft') {
+                p.status = 'sent';
+                await saveProject(p);
+            }
+        }
+
         exitSelectionMode();
         renderList();
+        alert('一括出力が完了しました');
     };
 }
 

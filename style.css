@@ -727,7 +727,7 @@ input:focus, select:focus, textarea:focus {
     right: 25px;
     width: 65px;
     height: 65px;
-    background: var(--primary);
+    background: #2563eb;
     color: white;
     border-radius: 50%;
     display: flex;
@@ -935,7 +935,7 @@ input:focus, select:focus, textarea:focus {
     bottom: 4px;
 }
 
-.btn-new-geppo { background: var(--primary) !important; color: white !important; }
+.btn-new-geppo { background: #2563eb !important; color: white !important; }
 
 .calendar-day.selected { background: #0ea5e9; color: white; }
 
