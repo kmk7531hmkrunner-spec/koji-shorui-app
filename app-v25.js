@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v24)...");
+console.log("Main script loading (Intelligent Workflow Build v25)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -257,9 +257,6 @@ function bindCardEvents(container) {
         card.addEventListener('mouseup', end);
         card.addEventListener('click', click);
     });
-}
-
-    updateSelectionUI();
 }
 
 function enterSelectionMode(firstId) { isSelectionMode = true; selectedIds.add(firstId); renderList(); }
@@ -754,12 +751,16 @@ function updateSelectionUI() {
     
     if (currentTab === 'sent') {
         if (isSelectionMode && selectedIds.size > 0) {
-            bulkBtn.textContent = `🗑 ${selectedIds.size}件をまとめて削除`;
-            bulkBtn.classList.add('btn-danger');
-            bulkBtn.classList.remove('hidden');
-            bulkBtn.onclick = handleBulkDelete;
+            // In Sent tab, we only need Delete button (PDF is for drafts usually)
+            bulkBtn.classList.add('hidden'); 
+            if (bulkDeleteBtn) {
+                bulkDeleteBtn.textContent = `🗑 ${selectedIds.size}件をまとめて削除`;
+                bulkDeleteBtn.classList.remove('hidden');
+                bulkDeleteBtn.onclick = handleBulkDelete;
+            }
         } else {
             bulkBtn.classList.add('hidden');
+            if (bulkDeleteBtn) bulkDeleteBtn.classList.add('hidden');
         }
         if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
     } else {
