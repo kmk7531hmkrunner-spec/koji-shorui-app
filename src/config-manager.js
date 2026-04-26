@@ -75,7 +75,14 @@ export async function getPdfConfig() {
   
   for (const type in customConfig) {
     if (config[type]) {
-      customConfig[type].fields.forEach(cF => {
+      let filteredFields = customConfig[type].fields;
+      
+      // Force prune Geppo fields to only keep row_0 if they exist in storage
+      if (type === 'geppo') {
+        filteredFields = filteredFields.filter(f => !f.id.startsWith('row_') || f.id.startsWith('row_0_'));
+      }
+
+      filteredFields.forEach(cF => {
         const dF = config[type].fields.find(f => f.id === cF.id);
         if (dF) {
           dF.x = cF.x;
