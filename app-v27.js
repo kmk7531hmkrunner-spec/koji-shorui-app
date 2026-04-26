@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v26)...");
+console.log("Main script loading (Intelligent Workflow Build v27)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -135,6 +135,28 @@ async function renderList() {
 
     const projects = await getAllProjects();
     
+    if (searchQuery) {
+        // GLOBAL SEARCH MODE
+        document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
+        if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
+        
+        const listContainer = els['project-list'];
+        if (!listContainer) return;
+
+        const filtered = filterBySearch(projects, searchQuery);
+        const geppoLabels = generateGeppoLabels(projects);
+
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `<div class="empty-state" style="padding:40px; text-align:center;"><p>条件に合う書類は見つかりません</p></div>`;
+        } else {
+            listContainer.innerHTML = `<div style="padding:12px; font-weight:bold; color:#0ea5e9; border-bottom:1px solid #f1f5f9; margin-bottom:10px; background:#f8fafc; border-radius:8px;">🔍 "${searchQuery}" の検索結果 (${filtered.length}件)</div>` + 
+                filtered.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
+            bindCardEvents(listContainer);
+        }
+        updateSelectionUI();
+        return;
+    }
+
     if (currentTab === 'sent') {
         if (els['calendar-view']) els['calendar-view'].classList.remove('hidden');
         if (typeof renderCalendar === 'function') renderCalendar(projects);
@@ -171,10 +193,11 @@ function filterBySearch(list, query) {
     const normalize = (val) => String(val || "").normalize("NFKC").toLowerCase();
     const q = normalize(query);
     return list.filter(p => {
+        if (p.type === 'geppo') return false; // Exclude Monthly Reports from search
         const fd = p.formData || {};
-        const fdValues = Object.values(fd).map(v => String(v)).join(" ");
-        const content = `${p.type} ${p.workerName} ${p.date} ${fdValues}`;
-        return normalize(content).includes(q);
+        // Search ONLY in: companyName, siteName, supervisorName, address
+        const searchText = `${fd.companyName || ''} ${fd.siteName || ''} ${fd.supervisorName || ''} ${fd.address || ''}`;
+        return normalize(searchText).includes(q);
     });
 }
 
@@ -755,8 +778,15 @@ function bindGlobalEvents() {
 function updateSelectionUI() {
     const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
     const bulkDeleteBtn = document.getElementById('btn-bulk-delete-exec');
+    const actionBar = els['bulk-action-bar'];
     if (!bulkBtn) return;
     
+    // Ensure the entire action bar is visible during selection mode
+    if (actionBar) {
+        if (isSelectionMode && selectedIds.size > 0) actionBar.classList.remove('hidden');
+        else actionBar.classList.add('hidden');
+    }
+
     if (currentTab === 'sent') {
         if (isSelectionMode && selectedIds.size > 0) {
             // In Sent tab, we only need Delete button (PDF is for drafts usually)
@@ -1022,6 +1052,7 @@ function bindBotEvents() {
         if (els['bot-container']) els['bot-container'].classList.toggle('hidden');
     };
 
+        if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
         if (els['btn-send-bot']) els['btn-send-bot'].onclick = () => {
             const input = els['bot-input'];
             const text = input.value.trim();
@@ -1034,7 +1065,7 @@ function bindBotEvents() {
                 "PDF": "・個別：カードの「PDF」ボタンから出力できます。\n・一括：長押しで複数選択し、下の「まとめてPDF」ボタンを押すと、選択した順番で1つのPDFになります。",
                 "削除": "・個別：カードの「削除」ボタンから行えます。\n・一括：長押しで複数選択し、下の「まとめて削除」ボタンで実行できます（確認画面が出ます）。",
                 "編集": "・下書き：カードの「編集」で修正できます。\n・完了：カレンダーで書類をタップし、詳細プレビューから「再編集」ボタンを押すと下書きに戻ります。",
-                "検索": "画面上の検索窓に現場名、監督名、会社名、作業内容などを入力すると、全データから瞬時に探し出せます。"
+                "検索": "画面上の検索窓に現場名、監督名、会社名、住所などを入力すると、全データから瞬時に探し出せます。※月報は検索対象外です。"
             };
 
             let found = false;
