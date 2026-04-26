@@ -963,3 +963,6 @@ window.copyFirstGeppoRow = () => {
 };
 
 // Note: Global functions are already bound to window at their definition points (L325, L352, L374, etc.)
+// Initialize App
+startApp();
+bindBotEvents();

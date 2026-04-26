@@ -219,6 +219,39 @@ function bindEvents() {
         }
     });
 
+    // Geppo Row Copy All (New Professional Logic)
+    addSafeListener(document.getElementById('btn-geppo-row-copy-all'), 'click', () => {
+        const type = editorTypeSelect.value;
+        const fields = currentLayoutConfig[type].fields;
+        
+        const intervalInput = document.getElementById('geppo-row-interval');
+        let interval = 2.5;
+        if (intervalInput) interval = parseFloat(intervalInput.value) || 2.5;
+
+        if (confirm(`1行目(Row0)の全ての項目設定を、残り30行に一括適用しますか？\n(行間隔: ${interval}%)`)) {
+            const columns = ['day', 'company', 'site', 'supervisor', 'address'];
+            
+            columns.forEach(colName => {
+                const sourceField = fields.find(f => f.id === `row_0_${colName}`);
+                if (!sourceField) return;
+
+                fields.forEach(f => {
+                    if (f.id.endsWith(`_${colName}`)) {
+                        const rowIndex = parseInt(f.id.split('_')[1]);
+                        f.x = sourceField.x;
+                        f.width = sourceField.width;
+                        f.fontSize = sourceField.fontSize;
+                        f.align = sourceField.align;
+                        f.y = sourceField.y + (rowIndex * interval);
+                    }
+                });
+            });
+            
+            renderEditorCanvas(type);
+            alert('全31行の一括適用が完了しました。');
+        }
+    });
+
     document.addEventListener('keydown', handleKeyboardMove);
 }
 
