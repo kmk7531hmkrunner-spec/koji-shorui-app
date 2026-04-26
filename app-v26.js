@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v25)...");
+console.log("Main script loading (Intelligent Workflow Build v26)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -146,22 +146,14 @@ async function renderList() {
     const listContainer = els['project-list'];
     if (!listContainer) return;
 
-    // SORT BY NEWEST FIRST (Descending ID)
-    let filtered = projects.filter(p => p.status === 'draft').sort((a, b) => b.id.localeCompare(a.id));
+    // SORT BY OLDEST FIRST (Ascending ID)
+    let filtered = projects.filter(p => p.status === 'draft').sort((a, b) => a.id.localeCompare(b.id));
 
     // Calculate Geppo labels
     const geppoLabels = generateGeppoLabels(projects);
 
     // Filter by search query
-    if (searchQuery) {
-        const normalize = (val) => String(val || "").normalize("NFKC").toLowerCase();
-        const q = normalize(searchQuery);
-        filtered = filtered.filter(p => {
-            const fd = p.formData || {};
-            const content = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content} ${fd.dailyReport}`;
-            return normalize(content).includes(q);
-        });
-    }
+    filtered = filterBySearch(filtered, searchQuery);
 
     if (filtered.length === 0) {
         listContainer.innerHTML = `<div class="empty-state" style="padding:40px; text-align:center; color:#94a3b8;"><p>下書きはありません</p></div>`;
@@ -172,6 +164,18 @@ async function renderList() {
     listContainer.innerHTML = filtered.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
     bindCardEvents(listContainer);
     updateSelectionUI();
+}
+
+function filterBySearch(list, query) {
+    if (!query) return list;
+    const normalize = (val) => String(val || "").normalize("NFKC").toLowerCase();
+    const q = normalize(query);
+    return list.filter(p => {
+        const fd = p.formData || {};
+        const fdValues = Object.values(fd).map(v => String(v)).join(" ");
+        const content = `${p.type} ${p.workerName} ${p.date} ${fdValues}`;
+        return normalize(content).includes(q);
+    });
 }
 
 function generateGeppoLabels(allProjects) {
@@ -324,9 +328,13 @@ function renderCalendarDayList(sentProjects) {
         return;
     }
 
-    const dayProjects = sentProjects.filter(p => p.date === selectedCalendarDate);
+    let dayProjects = sentProjects.filter(p => p.date === selectedCalendarDate);
+    
+    // Apply search filter even in calendar day list
+    dayProjects = filterBySearch(dayProjects, searchQuery);
+
     if (dayProjects.length === 0) {
-        listContainer.innerHTML = `<p class="empty-state">${selectedCalendarDate} の書類はありません</p>`;
+        listContainer.innerHTML = `<p class="empty-state">${selectedCalendarDate} ${searchQuery ? 'の条件に合う' : ''}書類はありません</p>`;
         return;
     }
 
@@ -1014,11 +1022,32 @@ function bindBotEvents() {
         if (els['bot-container']) els['bot-container'].classList.toggle('hidden');
     };
 
-        if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
         if (els['btn-send-bot']) els['btn-send-bot'].onclick = () => {
-            const msg = els['bot-input'].value.trim(); if (!msg) return;
-            addMessage('user', msg); els['bot-input'].value = '';
-            setTimeout(() => addMessage('bot', '確認いたします。'), 500);
+            const input = els['bot-input'];
+            const text = input.value.trim();
+            if (!text) return;
+            addMessage('user', text);
+            input.value = '';
+
+            const MANUAL = {
+                "使い方": "1. 右下の「＋」ボタンで書類（完了、丸産、月報）を作成します。\n2. 「下書き」タブに保存されます。\n3. 「PDF」ボタンで保存・出力すると「完了」タブ（カレンダー）に移動します。",
+                "PDF": "・個別：カードの「PDF」ボタンから出力できます。\n・一括：長押しで複数選択し、下の「まとめてPDF」ボタンを押すと、選択した順番で1つのPDFになります。",
+                "削除": "・個別：カードの「削除」ボタンから行えます。\n・一括：長押しで複数選択し、下の「まとめて削除」ボタンで実行できます（確認画面が出ます）。",
+                "編集": "・下書き：カードの「編集」で修正できます。\n・完了：カレンダーで書類をタップし、詳細プレビューから「再編集」ボタンを押すと下書きに戻ります。",
+                "検索": "画面上の検索窓に現場名、監督名、会社名、作業内容などを入力すると、全データから瞬時に探し出せます。"
+            };
+
+            let found = false;
+            for (let key in MANUAL) {
+                if (text.includes(key)) {
+                    setTimeout(() => addMessage('bot', MANUAL[key]), 500);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                setTimeout(() => addMessage('bot', "申し訳ありません。「使い方」「PDF」「削除」「編集」「検索」などのキーワードでお尋ねください。"), 500);
+            }
         };
     }
 }
