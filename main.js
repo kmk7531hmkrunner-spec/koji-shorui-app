@@ -109,15 +109,22 @@ async function init() {
 
 // --- List View Logic ---
 
+async function renderList() {
+    if (!els['project-list']) return;
+    
     let projects = await getAllProjects();
+    
+    // Normalization helper (Full-width -> Half-width, Lowercase)
+    const normalize = (val) => String(val || "").normalize("NFKC").toLowerCase();
     
     // Filter by search query
     if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+        const q = normalize(searchQuery);
         projects = projects.filter(p => {
             const fd = p.formData || {};
-            const searchStr = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content}`.toLowerCase();
-            return searchStr.includes(q);
+            // Concatenate all searchable text and normalize it
+            const content = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content} ${fd.dailyReport}`;
+            return normalize(content).includes(q);
         });
     }
 
