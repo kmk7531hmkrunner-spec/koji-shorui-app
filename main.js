@@ -895,12 +895,13 @@ function bindBotEvents() {
         if (els['bot-container']) els['bot-container'].classList.toggle('hidden');
     };
 
-    if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
-    if (els['btn-send-bot']) els['btn-send-bot'].onclick = () => {
-        const msg = els['bot-input'].value.trim(); if (!msg) return;
-        addMessage('user', msg); els['bot-input'].value = '';
-        setTimeout(() => addMessage('bot', '確認いたします。'), 500);
-    };
+        if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
+        if (els['btn-send-bot']) els['btn-send-bot'].onclick = () => {
+            const msg = els['bot-input'].value.trim(); if (!msg) return;
+            addMessage('user', msg); els['bot-input'].value = '';
+            setTimeout(() => addMessage('bot', '確認いたします。'), 500);
+        };
+    }
 }
 
 function addMessage(type, text) {
@@ -963,6 +964,3 @@ window.copyFirstGeppoRow = () => {
 };
 
 // Note: Global functions are already bound to window at their definition points (L325, L352, L374, etc.)
-// Initialize App
-startApp();
-bindBotEvents();
