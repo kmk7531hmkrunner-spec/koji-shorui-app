@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v27)...");
+console.log("Main script loading (Intelligent Workflow Build v28)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -25,6 +25,12 @@ let currentProject = null;
 
 // Tab Switcher Helper
 window.switchTab = (tabName) => {
+    // RESET SEARCH ON NAVIGATION (Tab switch or Logo click)
+    if (els['search-input']) {
+        els['search-input'].value = '';
+        searchQuery = '';
+    }
+
     currentTab = tabName;
     if (els.tabsList) {
         els.tabsList.forEach(t => {
@@ -78,7 +84,7 @@ function setupElements() {
         'btn-scanner-cancel', 'btn-scanner-done', 'btn-scanner-rotate', 'btn-scanner-filter',
         'document-preview-overlay', 'preview-canvas-container', 'btn-close-preview', 'btn-preview-pdf-out',
         'form-page-title', 'bot-container', 'fab-bot', 'btn-close-bot', 'btn-send-bot', 'bot-input', 'bot-messages',
-        'calendar-view', 'calendar-header', 'calendar-grid', 'calendar-day-list', 'global-nav'
+        'calendar-view', 'calendar-header', 'calendar-grid', 'calendar-day-list', 'global-nav', 'search-input'
     ];
     ids.forEach(id => {
         const el = document.getElementById(id);
