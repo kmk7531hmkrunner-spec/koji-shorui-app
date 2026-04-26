@@ -9,13 +9,16 @@ const geppoFields = [
   { id: "workerName", label: "氏名", x: 40, y: 5, fontSize: 12, width: 20 }
 ];
 
-// Generate ONLY THE FIRST row for Geppo as requested
-const yBase = 15;
-geppoFields.push({ id: `row_0_day`, label: `1日`, x: 5, y: yBase, fontSize: 9, width: 5 });
-geppoFields.push({ id: `row_0_company`, label: `(行1)会社名`, x: 12, y: yBase, fontSize: 9, width: 15 });
-geppoFields.push({ id: `row_0_site`, label: `(行1)現場名`, x: 30, y: yBase, fontSize: 9, width: 25 });
-geppoFields.push({ id: `row_0_supervisor`, label: `(行1)監督名`, x: 60, y: yBase, fontSize: 9, width: 10 });
-geppoFields.push({ id: `row_0_address`, label: `(行1)住所`, x: 75, y: yBase, fontSize: 9, width: 20 });
+// Restore 31 rows for Geppo.
+// Note: Row 0 is the master; Rows 1-30 will inherit its properties in getPdfConfig.
+for (let i = 0; i < 31; i++) {
+  const yBase = 15 + (i * 2.5);
+  geppoFields.push({ id: `row_${i}_day`, label: `${i+1}日`, x: 5, y: yBase, fontSize: 9, width: 5 });
+  geppoFields.push({ id: `row_${i}_company`, label: `(行${i+1})会社名`, x: 12, y: yBase, fontSize: 9, width: 15 });
+  geppoFields.push({ id: `row_${i}_site`, label: `(行${i+1})現場名`, x: 30, y: yBase, fontSize: 9, width: 25 });
+  geppoFields.push({ id: `row_${i}_supervisor`, label: `(行${i+1})監督名`, x: 60, y: yBase, fontSize: 9, width: 10 });
+  geppoFields.push({ id: `row_${i}_address`, label: `(行${i+1})住所`, x: 75, y: yBase, fontSize: 9, width: 20 });
+}
 
 const DEFAULT_CONFIG = {
   "kanryo": {
@@ -75,14 +78,29 @@ export async function getPdfConfig() {
   
   for (const type in customConfig) {
     if (config[type]) {
-      let filteredFields = customConfig[type].fields;
+      const customFields = customConfig[type].fields;
       
-      // Force prune Geppo fields to only keep row_0 if they exist in storage
+      // If Geppo, we allow Row 0 to dictate the layout of all other rows if they aren't explicitly saved
+      // But more importantly, if the user adjusted Row 0, we want to apply those master settings
       if (type === 'geppo') {
-        filteredFields = filteredFields.filter(f => !f.id.startsWith('row_') || f.id.startsWith('row_0_'));
+        const columns = ['day', 'company', 'site', 'supervisor', 'address'];
+        columns.forEach(col => {
+          const master = customFields.find(f => f.id === `row_0_${col}`);
+          if (master) {
+            // Apply master's X, Width, FontSize to all rows in the DEFAULT config
+            config[type].fields.forEach(f => {
+              if (f.id.endsWith(`_${col}`)) {
+                f.x = master.x;
+                f.width = master.width;
+                f.fontSize = master.fontSize;
+                if (master.align) f.align = master.align;
+              }
+            });
+          }
+        });
       }
 
-      filteredFields.forEach(cF => {
+      customFields.forEach(cF => {
         const dF = config[type].fields.find(f => f.id === cF.id);
         if (dF) {
           dF.x = cF.x;

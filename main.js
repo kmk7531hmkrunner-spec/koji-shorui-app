@@ -312,11 +312,26 @@ function renderCalendarDayList(sentProjects) {
     // Bind long press for calendar items
     listContainer.querySelectorAll('.project-card').forEach(card => {
         const id = card.dataset.id;
-        card.onmousedown = card.ontouchstart = () => {
-            longPressTimeout = setTimeout(() => { enterSelectionMode(id); }, 700);
+        const start = () => {
+            isLongPressAction = false;
+            longPressTimeout = setTimeout(() => { isLongPressAction = true; enterSelectionMode(id); }, 700);
         };
-        card.onmouseup = card.ontouchend = () => clearTimeout(longPressTimeout);
-        card.onclick = () => { if(isSelectionMode) toggleSelection(id); else window.handleCardPreview(id); };
+        const end = () => clearTimeout(longPressTimeout);
+        const click = (e) => { 
+            if (isLongPressAction) return; 
+            if (isSelectionMode) {
+                toggleSelection(id); 
+            } else {
+                // IMPORTANT: If clicking an action button (edit/delete), don't trigger preview
+                if (e.target.closest('.card-action-btn')) return;
+                window.handleCardPreview(id);
+            }
+        };
+        card.addEventListener('touchstart', start, {passive: true});
+        card.addEventListener('touchend', end, {passive: true});
+        card.addEventListener('mousedown', start);
+        card.addEventListener('mouseup', end);
+        card.addEventListener('click', click);
     });
 }
 
@@ -830,7 +845,11 @@ async function generatePdf(id, userName, docTypeName) {
     if (p.status === 'draft') {
         p.status = 'sent';
         await saveProject(p);
-        renderList();
+        
+        // Force refresh the entire list and switch tab if necessary, 
+        // but at minimum refresh current view
+        await renderList(); 
+        
         alert('PDFを作成しました。データを「完了」へ移動しました');
     }
 }
