@@ -11,65 +11,51 @@ export function adaptiveThreshold(imageData) {
   const width = imageData.width;
   const height = imageData.height;
   const data = imageData.data;
-  const output = new Uint8ClampedArray(data.length);
-  const gray = new Uint8ClampedArray(width * height);
+  const gray = new Uint8Array(width * height);
 
-  // 1. Pre-processing: Grayscale & Contrast Stretching
-  let min = 255, max = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    // Standard Luma coefficients for precise grayscale
-    const g = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-    gray[i / 4] = g;
-    if (g < min) min = g;
-    if (g > max) max = g;
+  // 1. Grayscale Conversion
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4;
+    gray[i] = (data[idx] * 77 + data[idx + 1] * 151 + data[idx + 2] * 28) >> 8;
   }
 
-  // Auto-Contrast Stretch
-  const range = max - min;
-  const contrastFactor = range > 0 ? 255 / range : 1;
-  for (let i = 0; i < gray.length; i++) {
-    gray[i] = (gray[i] - min) * contrastFactor;
-  }
-
-  // 2. Compute Integral Image
-  const integralImage = new Float64Array(width * height);
-  for (let x = 0; x < width; x++) {
-    let colSum = 0;
-    for (let y = 0; y < height; y++) {
-      const idx = y * width + x;
-      colSum += gray[idx];
-      integralImage[idx] = (x === 0 ? colSum : integralImage[idx - 1] + colSum);
+  // 2. Compute Integral Image (1-indexed for robust boundary math)
+  const integral = new Float64Array((width + 1) * (height + 1));
+  for (let y = 0; y < height; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < width; x++) {
+      rowSum += gray[y * width + x];
+      integral[(y + 1) * (width + 1) + (x + 1)] = integral[y * (width + 1) + (x + 1)] + rowSum;
     }
   }
 
-  // 3. Adaptive Thresholding Pass
-  const S = Math.max(8, Math.floor(width / 12));
-  const T = 0.15; // 15% sensitivity
+  // 3. Adaptive Threshold Pass
+  const S = Math.floor(width / 8);
+  const T = 0.15;
+  const S2 = Math.floor(S / 2);
 
-  for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) {
-      const idx = y * width + x;
-      const x1 = Math.max(x - S / 2, 0);
-      const x2 = Math.min(x + S / 2, width - 1);
-      const y1 = Math.max(y - S / 2, 0);
-      const y2 = Math.min(y + S / 2, height - 1);
-      
-      const count = (x2 - x1) * (y2 - y1);
-      const sum = integralImage[y2 * width + x2] 
-                - integralImage[y1 * width + x2] 
-                - integralImage[y2 * width + x1] 
-                + integralImage[y1 * width + x1];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const x1 = Math.max(1, x - S2 + 1);
+      const y1 = Math.max(1, y - S2 + 1);
+      const x2 = Math.min(width, x + S2 + 1);
+      const y2 = Math.min(height, y + S2 + 1);
 
-      const localMean = sum / count;
-      const val = (gray[idx] < localMean * (1.0 - T)) ? 0 : 255;
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const sum = integral[y2 * (width + 1) + x2] 
+                - integral[(y1 - 1) * (width + 1) + x2] 
+                - integral[y2 * (width + 1) + (x1 - 1)] 
+                + integral[(y1 - 1) * (width + 1) + (x1 - 1)];
+
+      const grayVal = gray[y * width + x];
+      const val = (grayVal * count < sum * (1.0 - T)) ? 0 : 255;
       
-      const outIdx = idx * 4;
-      output[outIdx] = output[outIdx + 1] = output[outIdx + 2] = val;
-      output[outIdx + 3] = 255;
+      const idx = (y * width + x) * 4;
+      data[idx] = data[idx + 1] = data[idx + 2] = val;
+      data[idx + 3] = 255;
     }
   }
-
-  return new ImageData(output, width, height);
+  return imageData;
 }
 
 /**

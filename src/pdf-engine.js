@@ -218,10 +218,6 @@ export async function generateBulkPdf(projects, templates, config) {
     const bg = templates[p.type];
     const canvas = await drawProjectToCanvas(p, bg, config);
     doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-    if (p.receiptImage && !p.receiptPosition) {
-      doc.addPage();
-      doc.addImage(p.receiptImage, 'JPEG', 20, 30, 100, 150);
-    }
   }
   return doc;
 }

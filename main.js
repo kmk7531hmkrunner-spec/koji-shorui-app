@@ -118,6 +118,27 @@ async function renderList() {
         const dateStr = p.date ? p.date.split('-').slice(1).join('/') : '--/--';
         const isSelected = selectedIds.has(p.id);
         
+        let mainInfoHtml = '';
+        if (p.type === 'marusan') {
+            const siteName = fd.siteName || '(現場名未入力)';
+            const displaySite = siteName.length > 15 ? siteName.substring(0, 14) + '...' : siteName;
+            mainInfoHtml = `
+                <div class="info-row"><strong>担当者:</strong> ${fd.supervisorName || '(未入力)'}</div>
+                <div class="info-row"><strong>現場名:</strong> ${displaySite}</div>
+            `;
+        } else if (p.type === 'kanryo') {
+            mainInfoHtml = `
+                <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
+                <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+            `;
+        } else {
+            // Geppo or others
+            mainInfoHtml = `
+                <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
+                <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+            `;
+        }
+
         return `
             <div class="project-card ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
                 <div class="project-card-body">
@@ -126,11 +147,10 @@ async function renderList() {
                         <span class="project-date">📅 ${dateStr}</span>
                     </div>
                     <div class="project-main-info">
-                        <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
-                        <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+                        ${mainInfoHtml}
                     </div>
                     <div class="project-card-footer">
-                        <span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>
+                        ${p.type === 'geppo' ? `<span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>` : ''}
                         <span class="card-hint">タップでプレビュー確認</span>
                     </div>
                 </div>
@@ -550,21 +570,52 @@ async function startScanner(file) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-        els['scanner-image'].src = e.target.result;
+        const originalDataUrl = e.target.result;
+        els['scanner-image'].src = originalDataUrl;
         els['scanner-overlay'].classList.remove('hidden');
-        const cropper = new Cropper(els['scanner-image'], { viewMode: 1, autoCropArea: 0.8 });
-        els['btn-scanner-cancel'].onclick = () => { els['scanner-overlay'].classList.add('hidden'); cropper.destroy(); };
-        els['btn-scanner-rotate'].onclick = () => cropper.rotate(90);
-        els['btn-scanner-filter'].onclick = () => {
+        
+        const filterBtn = els['btn-scanner-filter'];
+        filterBtn.textContent = "元画像に戻す";
+        let isFiltered = false;
+
+        const cropper = new Cropper(els['scanner-image'], { 
+            viewMode: 1, 
+            autoCropArea: 0.8,
+            ready() {
+                // Auto-apply B&W on start
+                applyFilter();
+            }
+        });
+
+        function applyFilter() {
             const canvas = cropper.getCroppedCanvas();
             const ctx = canvas.getContext('2d');
             ctx.putImageData(adaptiveThreshold(ctx.getImageData(0,0,canvas.width,canvas.height)), 0, 0);
-            cropper.replace(canvas.toDataURL('image/jpeg', 0.8));
+            cropper.replace(canvas.toDataURL('image/jpeg', 0.9));
+            isFiltered = true;
+            filterBtn.textContent = "元画像に戻す";
+        }
+
+        els['btn-scanner-cancel'].onclick = () => { els['scanner-overlay'].classList.add('hidden'); cropper.destroy(); };
+        els['btn-scanner-rotate'].onclick = () => cropper.rotate(90);
+        
+        filterBtn.onclick = () => {
+            if (isFiltered) {
+                // Restore Original (Requires re-cropping or just replacing data)
+                cropper.replace(originalDataUrl);
+                isFiltered = false;
+                filterBtn.textContent = "白黒補正する";
+            } else {
+                applyFilter();
+            }
         };
+
         els['btn-scanner-done'].onclick = async () => {
             const canvas = cropper.getCroppedCanvas({ maxWidth: 1200 });
-            const ctx = canvas.getContext('2d');
-            ctx.putImageData(adaptiveThreshold(ctx.getImageData(0,0,canvas.width,canvas.height)), 0, 0);
+            if (isFiltered) {
+                const ctx = canvas.getContext('2d');
+                ctx.putImageData(adaptiveThreshold(ctx.getImageData(0,0,canvas.width,canvas.height)), 0, 0);
+            }
             currentProject.receiptImage = canvas.toDataURL('image/jpeg', 0.8);
             renderForm(); 
             els['scanner-overlay'].classList.add('hidden');
