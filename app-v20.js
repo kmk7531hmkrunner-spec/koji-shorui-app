@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v19)...");
+console.log("Main script loading (Intelligent Workflow Build v20)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -844,33 +844,6 @@ async function handleBulkPdf() {
         exitSelectionMode();
         renderList();
     };
-}
-    if (selectedIds.size === 0) {
-        alert('作成する書類を1つ以上選択してください。');
-        return;
-    }
-    if (!confirm(`${selectedIds.size}件の書類を一括でPDF作成しますか？`)) return;
-    const projects = [];
-    for (const id of selectedIds) { 
-        const p = await getProject(id); 
-        if (p) projects.push(p); 
-    }
-    const config = await getPdfConfig();
-    const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
-    const doc = await generateBulkPdf(projects, templates, config);
-    doc.save(`bulk_${Date.now()}.pdf`);
-    
-    // Automatically move all generated projects to 'sent'
-    for (const p of projects) {
-        if (p.status === 'draft') {
-            p.status = 'sent';
-            await saveProject(p);
-        }
-    }
-    
-    exitSelectionMode();
-    renderList();
-    alert('一括出力が完了しました');
 }
 
 async function startScanner(file) {
