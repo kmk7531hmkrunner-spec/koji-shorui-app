@@ -1,13 +1,15 @@
 :root {
-  --bg-dark: #f8fafc;
-  --bg-card: #ffffff;
-  --accent-gold: #0ea5e9; /* Soft Blue */
-  --primary: #0ea5e9;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --status-draft: #f97316; /* Soft Orange */
-  --status-sent: #22c55e; /* Soft Green */
-  --border-color: #e2e8f0;
+  --bg-dark: #0a0f1d; 
+  --bg-app: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  --bg-card: #1e293b; 
+  --bg-paper: #1e293b;
+  --accent-gold: #94a3b8; 
+  --primary: #334155; 
+  --text-primary: #cbd5e1; 
+  --text-secondary: #94a3b8; 
+  --status-draft: #475569; 
+  --status-sent: #1e293b; 
+  --border-color: #1e293b;
   --safe-area-bottom: env(safe-area-inset-bottom);
 }
 
@@ -118,13 +120,28 @@ body {
 
 .project-card {
   background-color: var(--bg-card);
-  border-radius: 16px;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 100% 24px; /* Stationery line feel */
+  border-radius: 12px;
   margin-bottom: 1rem;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
   display: flex;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+  position: relative;
+}
+
+.project-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary);
+    opacity: 0.5;
 }
 
 .project-card-body {

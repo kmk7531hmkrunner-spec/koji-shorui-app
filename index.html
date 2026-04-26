@@ -82,9 +82,12 @@
         <div id="global-nav">
             <header class="app-header app-header-logo" id="main-app-header">
                 <div class="header-top-bar">
-                    <div class="app-logo-wrapper" onclick="window.switchTab('draft')" style="cursor:pointer; flex:1;">
-                        <h1 class="app-logo"><span>PRO</span>.DOC</h1>
-                        <span class="logo-subtitle">SMART WORKFLOW</span>
+                    <div class="app-logo-wrapper" onclick="window.switchTab('draft')" style="cursor:pointer; flex:1; display: flex; align-items: center; gap: 12px;">
+                        <div class="house-icon" style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.3));">🏠</div>
+                        <div style="display: flex; flex-direction: column; justify-content: center;">
+                            <h1 class="app-logo" style="letter-spacing: 1px; font-family: 'Noto Serif JP', serif; margin: 0; font-size: 1.6rem;">おやすみの宛先</h1>
+                            <span class="logo-subtitle" style="text-align: left; letter-spacing: 1px; font-weight: 500; opacity: 0.8; font-size: 0.65rem;">報告書作成アプリ</span>
+                        </div>
                     </div>
                     <button id="btn-report-issue" class="report-btn" title="不具合・改善要望">📮</button>
                 </div>
