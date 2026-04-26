@@ -20,42 +20,48 @@
             box-shadow: 0 4px 8px rgba(14, 165, 233, 0.3); transform: translateY(-1px); 
         }
 
-        /* Healing Modal Styles v29 */
+        /* Letter UI Styles v32 */
         .healing-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
             z-index: 11000; display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden; transition: all 0.5s ease;
+            opacity: 0; visibility: hidden; transition: all 0.6s ease;
         }
         .healing-overlay.show { opacity: 1; visibility: visible; }
-        .healing-content {
-            width: 90%; max-width: 500px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 24px; padding: 40px 30px; text-align: center; color: white;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            position: relative; overflow: hidden;
+        .healing-letter-paper {
+            width: 90%; max-width: 480px;
+            background: #fdfcf0; /* Creamy stationery color */
+            background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
+            border-radius: 4px; padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 0 100px rgba(0,0,0,0.05);
+            position: relative; overflow: visible;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .photo-frame {
+            width: 100%; background: white; padding: 10px 10px 40px 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transform: rotate(-2deg); margin-bottom: 30px;
+            border: 1px solid #ddd;
         }
         .healing-bg-img {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: -1; opacity: 0.5;
+            width: 100%; aspect-ratio: 4/3; object-fit: cover;
         }
-        .healing-message {
-            font-size: 1.25rem; line-height: 1.8; margin-bottom: 30px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); font-weight: 500;
+        .letter-body {
+            width: 100%; text-align: left;
+            font-family: 'Noto Serif JP', serif;
+            color: #334155; line-height: 2; font-size: 1.1rem;
+            position: relative;
         }
-        .healing-note {
-            font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);
-            border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 20px;
-        }
+        .healing-message { margin-bottom: 20px; }
         .btn-heal-close {
-            margin-top: 30px; background: white; color: #0ea5e9;
-            border: none; padding: 12px 30px; border-radius: 50px;
-            font-weight: bold; font-size: 1rem; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-top: 20px; background: transparent; color: #64748b;
+            border: 1px solid #cbd5e1; padding: 8px 20px; border-radius: 4px;
+            font-size: 0.9rem; cursor: pointer; transition: all 0.3s;
+            align-self: flex-end;
         }
+        .btn-heal-close:hover { background: #f1f5f9; color: #334155; }
 
         /* Report Icon Styles v29 */
         .header-top-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
@@ -259,14 +265,18 @@
         });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <!-- Healing Appreciation Modal -->
+    <!-- Healing Letter Modal v32 -->
     <div id="healing-modal" class="healing-overlay">
-        <div class="healing-content">
-            <img src="healing_landscape.png" class="healing-bg-img" id="healing-img">
-            <div class="healing-message" id="healing-text" style="font-family: 'Noto Serif JP', serif;">
-                今日も一日、本当にお疲れ様でした。<br>あなたの静かな頑張りを、私たちは知っています。
+        <div class="healing-letter-paper">
+            <div class="photo-frame">
+                <img src="healing_landscape.png" class="healing-bg-img" id="healing-img">
             </div>
-            <button class="btn-heal-close" id="btn-close-healing">閉じる</button>
+            <div class="letter-body">
+                <div class="healing-message" id="healing-text">
+                    今日も一日、本当にお疲れ様でした。<br>あなたの静かな頑張りを、私たちは知っています。
+                </div>
+            </div>
+            <button class="btn-heal-close" id="btn-close-healing">手紙を閉じる</button>
         </div>
     </div>
 
@@ -287,6 +297,6 @@
         </div>
     </div>
 
-    <script type="module" src="app-v31.js?v=20260427_v31"></script>
+    <script type="module" src="app-v32.js?v=20260427_v32"></script>
 </body>
 </html>
