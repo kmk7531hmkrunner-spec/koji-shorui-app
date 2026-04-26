@@ -225,8 +225,8 @@ function bindEvents() {
         const fields = currentLayoutConfig[type].fields;
         
         const intervalInput = document.getElementById('geppo-row-interval');
-        let interval = 2.5;
-        if (intervalInput) interval = parseFloat(intervalInput.value) || 2.5;
+        let interval = 2.0;
+        if (intervalInput) interval = parseFloat(intervalInput.value) || 2.0;
 
         if (confirm(`1行目(Row0)の全ての項目設定を、残り30行に一括適用しますか？\n(行間隔: ${interval}%)`)) {
             const columns = ['day', 'company', 'site', 'supervisor', 'address'];

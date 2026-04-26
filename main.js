@@ -415,6 +415,10 @@ window.confirmDeleteProject = (id) => {
 
 function showForm(type, project = null) {
     if (els['type-modal']) els['type-modal'].style.display = 'none';
+    
+    // Hide ALL views to ensure form-view is an independent screen
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    
     currentProject = project || {
         id: `project_${Date.now()}`,
         status: 'draft',
@@ -424,9 +428,12 @@ function showForm(type, project = null) {
         formData: { supportName: [] },
         receiptImage: null
     };
-    els['project-list-view'].classList.add('hidden');
+    
     els['form-view'].classList.remove('hidden');
     if (els['form-page-title']) els['form-page-title'].textContent = project ? '再編集' : '新規作成';
+    
+    // Ensure we start at the top of the new screen
+    window.scrollTo(0, 0);
     renderForm();
 }
 
