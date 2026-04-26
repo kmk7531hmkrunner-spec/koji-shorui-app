@@ -962,55 +962,10 @@ window.copyFirstGeppoRow = () => {
     }
 };
 
+
 window.handleCardPreview = (id) => handleCardPreview(id);
 window.confirmGeneratePdf = (id) => confirmGeneratePdf(id);
 window.editProject = (id) => editProject(id);
 window.confirmDeleteProject = (id) => confirmDeleteProject(id);
 window.generatePdf = (id, userName, docTypeName) => generatePdf(id, userName, docTypeName);
 window.handleReEditReceipt = () => handleReEditReceipt();
-
-/**
- * Image Processing: Adaptive Threshold for Scanner
- */
-function adaptiveThreshold(imageData) {
-    const { data, width, height } = imageData;
-    const output = new Uint8ClampedArray(data.length);
-    const gray = new Uint8Array(width * height);
-    
-    // Grayscale
-    for (let i = 0; i < data.length; i += 4) {
-        gray[i / 4] = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
-    }
-
-    const S = Math.floor(width / 8);
-    const T = 15;
-    const integralImg = new Int32Array(width * height);
-
-    for (let i = 0; i < width; i++) {
-        let sum = 0;
-        for (let j = 0; j < height; j++) {
-            const index = j * width + i;
-            sum += gray[index];
-            if (i === 0) integralImg[index] = sum;
-            else integralImg[index] = integralImg[index - 1] + sum;
-        }
-    }
-
-    for (let i = 0; i < width; i++) {
-        for (let j = 0; j < height; j++) {
-            const index = j * width + i;
-            const x1 = Math.max(i - S / 2, 0);
-            const x2 = Math.min(i + S / 2, width - 1);
-            const y1 = Math.max(j - S / 2, 0);
-            const y2 = Math.min(j + S / 2, height - 1);
-            const count = (x2 - x1) * (y2 - y1);
-            const sum = integralImg[y2 * width + x2] - integralImg[y1 * width + x2] - integralImg[y2 * width + x1] + integralImg[y1 * width + x1];
-            
-            const val = (gray[index] * count < sum * (100 - T) / 100) ? 0 : 255;
-            const outIdx = index * 4;
-            output[outIdx] = output[outIdx + 1] = output[outIdx + 2] = val;
-            output[outIdx + 3] = 255;
-        }
-    }
-    return new ImageData(output, width, height);
-}
