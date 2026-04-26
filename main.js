@@ -14,15 +14,30 @@ import { getPdfConfig } from './src/config-manager.js';
 
 console.log("Main script loading (Intelligent Workflow Build)...");
 
-// --- State ---
-let currentTab = 'draft';
-let currentProject = null;
-let els = {}; 
+// --- Global State & Setup ---
+let currentTab = 'draft'; // 'draft' or 'sent'
+let searchQuery = '';
 let isSelectionMode = false;
 let selectedIds = new Set();
+let currentProject = null;
+
+// Tab Switcher Helper
+window.switchTab = (tabName) => {
+    currentTab = tabName;
+    if (els.tabsList) {
+        els.tabsList.forEach(t => {
+            if (t.dataset.tab === tabName) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+    }
+    // FAB visibility sync
+    if (els['fab-plus']) {
+        els['fab-plus'].style.display = (currentTab === 'draft') ? 'flex' : 'none';
+    }
+    renderList();
+};
 let longPressTimeout = null;
 let isLongPressAction = false;
-let searchQuery = "";
 let currentCalendarDate = new Date();
 let selectedCalendarDate = null; // YYYY-MM-DD
 
@@ -435,15 +450,12 @@ function showForm(type, project = null) {
 
 window.closeForm = () => {
     if (confirm('作業中の内容は破棄されますが、戻りますか？')) {
+        // Force reset UI state
         if (els['form-view']) els['form-view'].classList.add('hidden');
-        if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
         if (els['app-header']) els['app-header'].classList.remove('hidden');
-        // Restore FAB based on current active tab
-        if (els['fab-plus']) {
-            els['fab-plus'].style.display = (currentTab === 'draft' || currentTab === 'list') ? 'flex' : 'none';
-            els['fab-plus'].classList.remove('hidden');
-        }
-        renderList();
+        
+        // Always go back to draft tab to ensure visibility of the work
+        window.switchTab('draft');
     }
 };
 
@@ -465,10 +477,12 @@ function renderForm() {
                 <div id="dynamic-form-fields">
                     ${currentProject.type === 'kanryo' ? renderKanryoFields() : (currentProject.type === 'marusan' ? renderMarusanFields() : renderGeppoFields())}
                 </div>
-                <div class="form-actions-bottom" style="margin-top: 3rem; margin-bottom: 5rem; display: flex; gap: 10px; border-top: 2px solid #e2e8f0; padding-top: 2rem;">
-                    <button class="btn btn-outline" id="btn-preview-doc" style="flex:1; height: 55px; font-weight:bold;">プレビュー</button>
-                    <button class="btn btn-primary" id="btn-save-draft" style="flex:1; height: 55px; font-weight:bold;">下書き保存</button>
-                </div>
+            </div>
+
+            <!-- FIXED ACTION BAR: Always visible, never overlaps inputs -->
+            <div class="form-fixed-actions">
+                <button class="btn btn-outline" id="btn-preview-doc" style="flex:1; height: 50px; font-weight:bold;">プレビュー</button>
+                <button class="btn btn-primary" id="btn-save-draft" style="flex:1; height: 50px; font-weight:bold;">下書き保存</button>
             </div>
         </div>
     `;
@@ -678,13 +692,13 @@ async function handleSaveDraft() {
     
     try {
         await saveProject(currentProject);
-        console.log('Project saved successfully');
         alert('保存しました');
         
-        // Hide form and show list
+        // Hide form and switch tab to DRAFT to ensure user sees their saved data
         if(els['form-view']) els['form-view'].classList.add('hidden');
-        if(els['project-list-view']) els['project-list-view'].classList.remove('hidden');
-        renderList();
+        if(els['app-header']) els['app-header'].classList.remove('hidden');
+        
+        window.switchTab('draft');
     } catch (err) {
         console.error('Save failed:', err);
         alert('保存に失敗しました: ' + err.message);
@@ -733,18 +747,7 @@ function bindGlobalEvents() {
 
     if (els.tabsList) {
         els.tabsList.forEach(tab => { 
-            tab.onclick = () => { 
-                els.tabsList.forEach(t => t.classList.remove('active')); 
-                tab.classList.add('active'); 
-                currentTab = tab.dataset.tab; 
-                
-                // FAB button visibility: Only on 'list' (Draft) tab
-                if (els['fab-plus']) {
-                    els['fab-plus'].style.display = (currentTab === 'list') ? 'flex' : 'none';
-                }
-                
-                renderList(); 
-            }; 
+            tab.onclick = () => window.switchTab(tab.dataset.tab); 
         });
     }
 
