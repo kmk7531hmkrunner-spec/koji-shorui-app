@@ -143,12 +143,6 @@ async function renderList() {
         `;
     }).join('');
 
-    // Handle Tap on Background to deselect
-    els['project-list'].onclick = (e) => {
-        if (isSelectionMode && !e.target.closest('.project-card')) {
-            exitSelectionMode();
-        }
-    };
 
     document.querySelectorAll('.project-card').forEach(card => {
         const id = card.dataset.id;
@@ -289,8 +283,8 @@ function renderKanryoFields() {
             <div class="form-group"><label class="label">👤 作業者名</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="作業者名を入力"></div>
             <div class="form-group highlight-box"><label class="label">📅 日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
             <div class="form-group"><label class="label">会社名</label><input type="text" id="field-companyName" value="${fd.companyName || ''}" placeholder="会社名を入力"></div>
-            <div class="form-group"><label class="label">事業所名</label><input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="（主にAHCの時）"></div>
-            <div class="form-group"><label class="label">担当者名</label><input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="（監督）"></div>
+            <div class="form-group"><label class="label">事業所名 <span class="label-hint-inline">（主にAHCの時）</span></label><input type="text" id="field-officeName" value="${fd.officeName || ''}" placeholder="事業所名を入力"></div>
+            <div class="form-group"><label class="label">担当者名 <span class="label-hint-inline">（監督）</span></label><input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="担当者名を入力"></div>
             <div class="form-group"><label class="label">訪問回数</label><select id="field-visitCount">
                 <option value="1" ${fd.visitCount === '1' ? 'selected' : ''}>1回目</option>
                 <option value="2" ${fd.visitCount === '2' ? 'selected' : ''}>2回目</option>
@@ -309,9 +303,9 @@ function renderKanryoFields() {
         </div>
         <div class="form-section">
             <h3 class="section-title">経費・領収書</h3>
-            <div class="form-group"><label class="label">駐車場代</label>
+            <div class="form-group"><label class="label">駐車場代 <span class="label-hint-inline">（丸産技研は材料代に記入）</span></label>
                 <div class="receipt-action-unit">
-                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="（丸産技研は材料代に記入）">
+                    <input type="number" id="field-parkingFee" value="${fd.parkingFee || ''}" placeholder="金額を入力">
                     <button type="button" class="btn btn-sm btn-accent" id="btn-scan-receipt" style="margin:0;">📸 撮影</button>
                     <div id="receipt-preview-mini" class="receipt-mini-preview" onclick="handleReEditReceipt()">
                         ${currentProject.receiptImage ? `<img src="${currentProject.receiptImage}">` : '<span style="font-size:10px; color:#94a3b8;">未撮影</span>'}
@@ -319,25 +313,25 @@ function renderKanryoFields() {
                 </div>
             </div>
             <div class="form-group">
-                <label class="label">高速代</label>
+                <label class="label">高速代 <span class="label-hint-inline">（この現場に行くのに使った分）</span></label>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="（この現場に行くのに使った分）" style="flex:1;">
+                    <input type="number" id="field-highwayFee" value="${fd.highwayFee || ''}" placeholder="金額を入力" style="flex:1;">
                     <a href="https://www.driveplaza.com/dp/SearchTop" target="_blank" class="btn-search-link">🌐 料金検索</a>
                 </div>
             </div>
-            <div class="form-group"><label class="label">材料代</label><input type="number" id="field-materialFee" value="${fd.materialFee || ''}" placeholder="（丸産駐車場はここに書く）"></div>
+            <div class="form-group"><label class="label">材料代 <span class="label-hint-inline">（丸産駐車場はここに書く）</span></label><input type="number" id="field-materialFee" value="${fd.materialFee || ''}" placeholder="金額を入力"></div>
         </div>
         <div class="form-section">
             <h3 class="section-title">現場詳細</h3>
             <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名を入力"></div>
-            <div class="form-group"><label class="label">注文番号</label><input type="text" id="field-orderNumber" value="${fd.orderNumber || ''}" placeholder="（アクシア9桁、AHC英字＋5桁、三井10桁）"></div>
+            <div class="form-group"><label class="label">注文番号 <span class="label-hint-inline">（アクシア9桁、AHC英字＋5桁、三井10桁）</span></label><input type="text" id="field-orderNumber" value="${fd.orderNumber || ''}" placeholder="注文番号を入力"></div>
             <div class="form-group"><label class="label">住所</label><input type="text" id="field-address" value="${fd.address || ''}" placeholder="住所を入力"></div>
         </div>
         <div class="form-section">
             <h3 class="section-title">作業内容・報告</h3>
-            <div class="form-group"><label class="label">工事内容</label><textarea id="field-content" rows="4" placeholder="（開始終了時間、建新計数、多く使った材料）">${fd.content || ''}</textarea></div>
-            <div class="form-group"><label class="label">日報</label><textarea id="field-dailyReport" rows="4" placeholder="（現場日誌）">${fd.dailyReport || ''}</textarea></div>
-            <div class="form-group"><label class="label">合計額</label><input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}" placeholder="（アクシア、OTOなど）"></div>
+            <div class="form-group"><label class="label">工事内容 <span class="label-hint-inline">（開始終了時間、建新計数、多く使った材料）</span></label><textarea id="field-content" rows="4" placeholder="工事内容を入力">${fd.content || ''}</textarea></div>
+            <div class="form-group"><label class="label">日報 <span class="label-hint-inline">（現場日誌）</span></label><textarea id="field-dailyReport" rows="4" placeholder="日報内容を入力">${fd.dailyReport || ''}</textarea></div>
+            <div class="form-group"><label class="label">合計額 <span class="label-hint-inline">（アクシア、OTOなど）</span></label><input type="number" id="field-totalAmount" value="${fd.totalAmount || ''}" placeholder="合計金額を入力"></div>
             <div class="form-group"><label class="label">消費税</label><input type="number" id="field-taxAmount" value="${fd.taxAmount || ''}" placeholder="消費税を入力"></div>
         </div>
     `;
@@ -350,7 +344,7 @@ function renderMarusanFields() {
             <h3 class="section-title">丸産報告書 入力</h3>
             <div class="form-group highlight-box"><label class="label">📅 日付</label><input type="date" id="form-date" value="${currentProject.date || ''}"></div>
             <div class="form-group">
-                <label class="label">担当者名 <span class="label-hint">山田→正裕/拓実　佐藤→裕翔/祐亮</span></label>
+                <label class="label">担当者名 <span class="label-hint-inline">山田→正裕/拓実　佐藤→裕翔/祐亮</span></label>
                 <input type="text" id="field-supervisorName" value="${fd.supervisorName || ''}" placeholder="担当者名を入力">
             </div>
             <div class="form-group"><label class="label">現場名</label><input type="text" id="field-siteName" value="${fd.siteName || ''}" placeholder="現場名を入力"></div>
@@ -359,8 +353,16 @@ function renderMarusanFields() {
                 <div class="form-group" style="flex:1;"><label class="label">終了時間</label><input type="time" id="field-endTime" value="${fd.endTime || ''}"></div>
             </div>
             <div class="form-group"><label class="label">作業内容</label><textarea id="field-content" rows="6" placeholder="作業内容を詳細に記入してください">${fd.content || ''}</textarea></div>
-            <div class="form-group"><label class="label">作業者</label>
-                <input type="text" id="field-worker1" value="${fd.worker1 || ''}" placeholder="作業者名を入力">
+            <div class="form-group">
+                <label class="label">作業者</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <input type="text" id="field-worker1" value="${fd.worker1 || ''}" placeholder="作業者1">
+                    <input type="text" id="field-worker2" value="${fd.worker2 || ''}" placeholder="作業者2">
+                    <input type="text" id="field-worker3" value="${fd.worker3 || ''}" placeholder="作業者3">
+                    <input type="text" id="field-worker4" value="${fd.worker4 || ''}" placeholder="作業者4">
+                    <input type="text" id="field-worker5" value="${fd.worker5 || ''}" placeholder="作業者5">
+                    <input type="text" id="field-worker6" value="${fd.worker6 || ''}" placeholder="作業者6">
+                </div>
             </div>
         </div>
     `;
@@ -481,6 +483,19 @@ function bindGlobalEvents() {
     }
 
     safeBind('btn-bulk-pdf-exec', 'onclick', handleBulkPdf);
+
+    // Global Click Listener for Deselection (Tap background to exit selection mode)
+    document.addEventListener('click', (e) => {
+        if (!isSelectionMode) return;
+        
+        // If clicking a card or the bulk button, don't exit
+        if (e.target.closest('.project-card') || e.target.closest('#btn-bulk-pdf-exec')) return;
+        
+        // If clicking a modal or detail view, don't exit
+        if (e.target.closest('.modal-content') || e.target.closest('.scanner-overlay')) return;
+        
+        exitSelectionMode();
+    });
 }
 
 function updateSelectionUI() {
@@ -489,10 +504,10 @@ function updateSelectionUI() {
     if (!bulkContainer || !bulkBtn) return;
     
     if (isSelectionMode && selectedIds.size > 0) {
-        bulkBtn.textContent = `📄 ${selectedIds.size}件をまとめてPDFにする`;
+        bulkBtn.textContent = `📄 ${selectedIds.size}件を複数選択（まとめてPDF）`;
         if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
     } else {
-        bulkBtn.textContent = `📄 複数選択してまとめてPDFを作成`;
+        bulkBtn.textContent = `📄 複数選択（まとめてPDF）`;
         if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
     }
 }

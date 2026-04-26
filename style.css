@@ -653,25 +653,50 @@ input:focus, select:focus, textarea:focus {
     to { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-/* Enhanced FAB */
-.fab-plus {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 68px;
-    height: 68px;
-    border-radius: 50%;
-    background: var(--primary-blue);
+/* Project Card Selection State */
+.project-card.selectable {
+    border: 1.5px solid #e2e8f0;
+}
+
+.project-card.selected {
+    border-color: #0ea5e9;
+    background-color: #f0f9ff;
+    box-shadow: 0 0 0 2px #0ea5e9;
+}
+
+.project-card.selected::before {
+    content: "✓";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background: #0ea5e9;
     color: white;
-    font-size: 32px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 10;
+}
+
+/* FAB Styling Unified */
+.fab-plus {
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background-color: #0ea5e9; /* Matched with Primary */
+    color: white;
     border: none;
-    z-index: 1000;
+    font-size: 32px;
+    box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
     cursor: pointer;
-    transition: transform 0.2s, background 0.2s;
+    z-index: 1000;
     -webkit-tap-highlight-color: transparent;
 }
 .fab-plus:active {
