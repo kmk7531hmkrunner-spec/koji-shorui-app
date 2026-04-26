@@ -252,6 +252,18 @@ function bindEvents() {
         }
     });
 
+    // Geppo Live Interval Step Buttons
+    document.querySelectorAll('.btn-interval-step').forEach(btn => {
+        addSafeListener(btn, 'click', () => {
+            const input = document.getElementById('geppo-row-interval');
+            const dir = btn.dataset.dir === 'up' ? 1 : -1;
+            const newVal = Math.max(0, parseFloat(input.value || 0) + (dir * 0.1));
+            input.value = newVal.toFixed(1);
+            // Trigger the input event to run the live spacing logic
+            input.dispatchEvent(new Event('input'));
+        });
+    });
+
     addSafeListener(document.getElementById('geppo-row-interval'), 'input', (e) => {
         const interval = parseFloat(e.target.value) || 0;
         const type = editorTypeSelect.value;
@@ -498,18 +510,20 @@ function selectField(field, label) {
 }
 
 function updateSelectionUI() {
+    const type = editorTypeSelect.value;
+    const batchPanel = document.getElementById('geppo-batch-actions');
+
     if (selectedFieldId) {
         fieldSettings.classList.remove('hidden');
         noSelectionMsg.classList.add('hidden');
-        
-        // Show/Hide Geppo Batch Action Panel
-        const batchPanel = document.getElementById('geppo-batch-actions');
-        if (batchPanel) {
-            batchPanel.classList.toggle('hidden', !selectedFieldId.startsWith('row_'));
-        }
     } else {
         fieldSettings.classList.add('hidden');
         noSelectionMsg.classList.remove('hidden');
+    }
+
+    // Geppo Batch Panel: Show whenever Monthly Report is active
+    if (batchPanel) {
+        batchPanel.classList.toggle('hidden', type !== 'geppo');
     }
 }
 

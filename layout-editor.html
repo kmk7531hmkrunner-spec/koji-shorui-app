@@ -167,13 +167,14 @@
                     <div id="geppo-batch-actions" class="hidden" style="margin-bottom: 1rem; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
                         <label style="font-size: 0.8rem; color: #0369a1; font-weight: bold; display: block; margin-bottom: 5px;">🌙 月報: 行レイアウト一括適用</label>
                         <p style="font-size: 0.7rem; color: #0c4a6e; margin-bottom: 8px;">現在の行の設定（X, 幅, フォント）を他の全30行にコピーします。</p>
-                        <div style="display:flex; gap:5px; align-items:center; margin-bottom:8px;">
+                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
                             <span style="font-size:0.7rem;">行間隔 (Y %):</span>
-                            <input type="number" id="geppo-row-interval" value="2.5" step="0.1" style="width:60px; font-size:0.7rem; padding:2px;">
+                            <button class="btn btn-sm btn-outline btn-interval-step" data-dir="down" style="padding:2px 8px; font-weight:bold;">-</button>
+                            <input type="number" id="geppo-row-interval" value="2.5" step="0.1" style="width:50px; font-size:0.8rem; padding:4px; text-align:center; border:1px solid #0ea5e9; border-radius:4px;">
+                            <button class="btn btn-sm btn-outline btn-interval-step" data-dir="up" style="padding:2px 8px; font-weight:bold;">+</button>
                         </div>
                         <div style="display:flex; gap:5px; flex-direction: column;">
-                            <button class="btn btn-sm btn-outline" id="btn-geppo-batch-copy" style="font-size: 0.7rem;">選択中の項目を全行に複製</button>
-                            <button class="btn btn-sm btn-primary" id="btn-geppo-row-copy-all" style="font-size: 0.7rem; background: #0369a1; border-color: #0369a1;">★ 1行目(Row0)の全項目を全31行に複製</button>
+                            <button class="btn btn-sm btn-primary" id="btn-geppo-row-copy-all" style="font-size: 0.7rem; background: #0369a1; border-color: #0369a1;">★ 1行目(Row0)の全項目を全31行に同期</button>
                         </div>
                     </div>
 
@@ -305,6 +306,6 @@
 
         window.addEventListener('load', safeInit);
     </script>
-    <script type="module" src="editor.js?v=20260426_v4"></script>
+    <script type="module" src="editor.js?v=20260426_v6"></script>
 </body>
 </html>
