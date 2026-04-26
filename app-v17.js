@@ -128,11 +128,9 @@ async function init() {
 // --- List View Logic ---
 
 async function renderList() {
-    // Hide all views first
-    Object.values(els).forEach(el => {
-        if (el && el.classList && el.classList.contains('view')) {
-            el.classList.add('hidden');
-        }
+    // Hide all view containers first to ensure a clean slate
+    document.querySelectorAll('.view-container').forEach(el => {
+        el.classList.add('hidden');
     });
 
     const projects = await getAllProjects();
@@ -425,10 +423,8 @@ window.confirmDeleteProject = (id) => {
 function showForm(type, project = null) {
     if (els['type-modal']) els['type-modal'].style.display = 'none';
     
-    // Hide ALL views and global UI to create an 'Independent Page' feel
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    if (els['app-header']) els['app-header'].classList.add('hidden');
-    if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
+    // Hide ALL standardized view containers for a clean transition
+    document.querySelectorAll('.view-container').forEach(v => v.classList.add('hidden'));
     
     currentProject = project || {
         id: `project_${Date.now()}`,
@@ -739,13 +735,7 @@ function bindGlobalEvents() {
         safeBind(`btn-new-${type}`, 'onclick', () => showForm(type)); 
     });
 
-    if (els['btn-back']) els['btn-back'].onclick = () => { 
-        if (confirm('作業中の内容は破棄されますが、戻りますか？')) { 
-            if(els['form-view']) els['form-view'].classList.add('hidden'); 
-            if(els['project-list-view']) els['project-list-view'].classList.remove('hidden'); 
-            renderList(); 
-        } 
-    };
+    if (els['btn-back']) els['btn-back'].onclick = () => window.closeForm();
 
     if (els.tabsList) {
         els.tabsList.forEach(tab => { 
