@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v23)...");
+console.log("Main script loading (Intelligent Workflow Build v24)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -145,18 +145,12 @@ async function renderList() {
     
     const listContainer = els['project-list'];
     if (!listContainer) return;
-    let filtered = projects.filter(p => p.status === 'draft');
 
-    // Pre-calculate Monthly Report numbering for duplicates
-    const geppoCounts = {}; 
-    // Sort geppo by date to ensure consistent numbering
-    const sortedGeppo = [...filtered].filter(p => p.type === 'geppo').sort((a,b) => a.id.localeCompare(b.id));
-    const geppoLabels = {}; // ProjectID -> Label
-    sortedGeppo.forEach(p => {
-        const ym = p.date ? p.date.substring(0, 7).replace('-', '年') + '月' : '時期未定';
-        geppoCounts[ym] = (geppoCounts[ym] || 0) + 1;
-        geppoLabels[p.id] = geppoCounts[ym] > 1 ? `${ym} (${geppoCounts[ym]}枚目)` : ym;
-    });
+    // SORT BY NEWEST FIRST (Descending ID)
+    let filtered = projects.filter(p => p.status === 'draft').sort((a, b) => b.id.localeCompare(a.id));
+
+    // Calculate Geppo labels
+    const geppoLabels = generateGeppoLabels(projects);
 
     // Filter by search query
     if (searchQuery) {
@@ -175,56 +169,73 @@ async function renderList() {
         return;
     }
 
-    listContainer.innerHTML = filtered.map(p => {
-        const fd = p.formData || {};
-        const dateStr = p.date ? p.date.split('-').slice(1).join('/') : '--/--';
-        const isSelected = selectedIds.has(p.id);
-        
-        let mainInfoHtml = '';
-        if (p.type === 'marusan') {
-            const siteName = fd.siteName || '(現場名未入力)';
-            const displaySite = siteName.length > 15 ? siteName.substring(0, 14) + '...' : siteName;
-            mainInfoHtml = `
-                <div class="info-row"><strong>担当者:</strong> ${fd.supervisorName || '(未入力)'}</div>
-                <div class="info-row"><strong>現場名:</strong> ${displaySite}</div>
-            `;
-        } else if (p.type === 'geppo') {
-            mainInfoHtml = `
-                <div class="info-row"><strong>年月:</strong> ${geppoLabels[p.id]}</div>
-                <div class="info-row"><strong>作業者:</strong> ${p.workerName || fd.workerName || '(未入力)'}</div>
-            `;
-        } else {
-            mainInfoHtml = `
-                <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
-                <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
-            `;
-        }
+    listContainer.innerHTML = filtered.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
+    bindCardEvents(listContainer);
+    updateSelectionUI();
+}
 
-        return `
-            <div class="project-card fade-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
-                <div class="project-card-body">
-                    <div class="project-card-header">
-                        <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
-                        <span class="project-date">📅 ${dateStr}</span>
-                    </div>
-                    <div class="project-main-info">
-                        ${mainInfoHtml}
-                    </div>
-                    <div class="project-card-footer">
-                        <span class="card-hint">タップで詳細・プレビュー</span>
-                    </div>
+function generateGeppoLabels(allProjects) {
+    const geppoCounts = {}; 
+    const sortedGeppo = [...allProjects].filter(p => p.type === 'geppo').sort((a,b) => a.id.localeCompare(b.id));
+    const labels = {}; 
+    sortedGeppo.forEach(p => {
+        const ym = p.date ? p.date.substring(0, 7).replace('-', '年') + '月' : '時期未定';
+        geppoCounts[ym] = (geppoCounts[ym] || 0) + 1;
+        labels[p.id] = geppoCounts[ym] > 1 ? `${ym} (${geppoCounts[ym]}枚目)` : ym;
+    });
+    return labels;
+}
+
+function renderProjectCardHtml(p, geppoLabels) {
+    const fd = p.formData || {};
+    const dateStr = p.date ? p.date.split('-').slice(1).join('/') : '--/--';
+    const isSelected = selectedIds.has(p.id);
+    
+    let mainInfoHtml = '';
+    if (p.type === 'marusan') {
+        const siteName = fd.siteName || '(現場名未入力)';
+        const displaySite = siteName.length > 15 ? siteName.substring(0, 14) + '...' : siteName;
+        mainInfoHtml = `
+            <div class="info-row"><strong>担当者:</strong> ${fd.supervisorName || '(未入力)'}</div>
+            <div class="info-row"><strong>現場名:</strong> ${displaySite}</div>
+        `;
+    } else if (p.type === 'geppo') {
+        mainInfoHtml = `
+            <div class="info-row"><strong>年月:</strong> ${geppoLabels[p.id] || ''}</div>
+            <div class="info-row"><strong>作業者:</strong> ${p.workerName || fd.workerName || '(未入力)'}</div>
+        `;
+    } else {
+        mainInfoHtml = `
+            <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
+            <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+        `;
+    }
+
+    return `
+        <div class="project-card fade-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
+            <div class="project-card-body">
+                <div class="project-card-header">
+                    <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
+                    <span class="project-date">📅 ${dateStr}</span>
                 </div>
-                <div class="project-card-actions">
-                    ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="window.confirmGeneratePdf('${p.id}')">📄<br>PDF</button>` : `<button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>再編集</button>`}
-                    ${p.status === 'draft' ? `<button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>編集</button>` : ''}
-                    <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
+                <div class="project-main-info">
+                    ${mainInfoHtml}
+                </div>
+                <div class="project-card-footer">
+                    <span class="card-hint">タップで詳細・プレビュー</span>
                 </div>
             </div>
-        `;
-    }).join('');
+            <div class="project-card-actions">
+                ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="window.confirmGeneratePdf('${p.id}')">📄<br>PDF</button>` : `<button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>再編集</button>`}
+                ${p.status === 'draft' ? `<button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>編集</button>` : ''}
+                <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
+            </div>
+        </div>
+    `;
+}
 
-
-    document.querySelectorAll('.project-card').forEach(card => {
+function bindCardEvents(container) {
+    container.querySelectorAll('.project-card').forEach(card => {
         const id = card.dataset.id;
         const start = () => {
             isLongPressAction = false;
@@ -236,7 +247,7 @@ async function renderList() {
             if (isSelectionMode) {
                 toggleSelection(id); 
             } else {
-                if (e.target.closest('.card-action-btn')) return; // Action buttons handle their own clicks
+                if (e.target.closest('.card-action-btn')) return; 
                 window.handleCardPreview(id);
             }
         };
@@ -246,6 +257,7 @@ async function renderList() {
         card.addEventListener('mouseup', end);
         card.addEventListener('click', click);
     });
+}
 
     updateSelectionUI();
 }
@@ -321,49 +333,14 @@ function renderCalendarDayList(sentProjects) {
         return;
     }
 
-    listContainer.innerHTML = `<h4>${selectedCalendarDate} の書類 (${dayProjects.length}件)</h4>` + dayProjects.map(p => {
-        const isSelected = selectedIds.has(p.id);
-        return `
-            <div class="project-card scale-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}">
-                <div class="project-card-body">
-                    <div class="project-card-header">
-                        <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : '完了/丸産'}</span>
-                    </div>
-                    <div class="info-row"><strong>監督:</strong> ${p.formData.supervisorName || ''}</div>
-                    <div class="info-row"><strong>現場:</strong> ${p.formData.siteName || ''}</div>
-                </div>
-                <div class="project-card-actions">
-                    <button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>再編集</button>
-                    <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+    // Reuse unified card generator
+    const allSentProjects = sentProjects; // For labels
+    const geppoLabels = generateGeppoLabels(allSentProjects);
     
-    // Bind long press for calendar items
-    listContainer.querySelectorAll('.project-card').forEach(card => {
-        const id = card.dataset.id;
-        const start = () => {
-            isLongPressAction = false;
-            longPressTimeout = setTimeout(() => { isLongPressAction = true; enterSelectionMode(id); }, 700);
-        };
-        const end = () => clearTimeout(longPressTimeout);
-        const click = (e) => { 
-            if (isLongPressAction) return; 
-            if (isSelectionMode) {
-                toggleSelection(id); 
-            } else {
-                // IMPORTANT: If clicking an action button (edit/delete), don't trigger preview
-                if (e.target.closest('.card-action-btn')) return;
-                window.handleCardPreview(id);
-            }
-        };
-        card.addEventListener('touchstart', start, {passive: true});
-        card.addEventListener('touchend', end, {passive: true});
-        card.addEventListener('mousedown', start);
-        card.addEventListener('mouseup', end);
-        card.addEventListener('click', click);
-    });
+    listContainer.innerHTML = `<h4>${selectedCalendarDate} の書類 (${dayProjects.length}件)</h4>` + 
+        dayProjects.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
+    
+    bindCardEvents(listContainer);
 }
 
 // --- Preview & Action Logic ---
@@ -857,7 +834,7 @@ async function handleBulkPdf() {
         
         let filename = '';
         if (typeSelect.value === '月報') {
-            filename = `${y}_${m}_${name}.pdf`;
+            filename = `${y}_${m}_${name}月報.pdf`;
         } else {
             filename = `${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`;
         }
@@ -956,7 +933,7 @@ async function generatePdf(id, userName, docTypeName) {
     const d = String(now.getDate()).padStart(2, '0');
     let filename = '';
     if (p.type === 'geppo') {
-        filename = `${y}_${m}_${userName}.pdf`;
+        filename = `${y}_${m}_${userName}月報.pdf`;
     } else {
         filename = `${y}_${m}_${d}_${userName}_${docTypeName}.pdf`;
     }
