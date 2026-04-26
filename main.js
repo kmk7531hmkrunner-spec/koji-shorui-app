@@ -446,8 +446,11 @@ function renderForm() {
             </div>
         </div>
     `;
-    document.getElementById('btn-save-draft').onclick = handleSaveDraft;
-    document.getElementById('btn-preview-doc').onclick = handleShowPreview;
+    const previewBtn = document.getElementById('btn-preview-doc');
+    if (previewBtn) previewBtn.onclick = handleShowPreview;
+    
+    const saveBtn = document.getElementById('btn-save-draft');
+    if (saveBtn) saveBtn.onclick = handleSaveDraft;
     const chipGroup = document.getElementById('support-chip-group');
     if (chipGroup) {
         chipGroup.onclick = (e) => {

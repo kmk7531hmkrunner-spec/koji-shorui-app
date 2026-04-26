@@ -513,6 +513,7 @@ function updateSelectionUI() {
     const type = editorTypeSelect.value;
     const batchPanel = document.getElementById('geppo-batch-actions');
 
+    // UI State for standard fields
     if (selectedFieldId) {
         fieldSettings.classList.remove('hidden');
         noSelectionMsg.classList.add('hidden');
@@ -521,9 +522,15 @@ function updateSelectionUI() {
         noSelectionMsg.classList.remove('hidden');
     }
 
-    // Geppo Batch Panel: Show whenever Monthly Report is active
+    // Geppo Batch Panel: ABSOLUTELY ALWAYS VISIBLE when Monthly Report is selected
     if (batchPanel) {
-        batchPanel.classList.toggle('hidden', type !== 'geppo');
+        if (type === 'geppo') {
+            batchPanel.classList.remove('hidden');
+            batchPanel.style.display = 'block'; // Force override
+        } else {
+            batchPanel.classList.add('hidden');
+            batchPanel.style.display = 'none';
+        }
     }
 }
 
