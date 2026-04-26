@@ -446,9 +446,9 @@ window.closeForm = () => {
         if (els['form-view']) els['form-view'].classList.add('hidden');
         if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
         if (els['app-header']) els['app-header'].classList.remove('hidden');
-        // Restore FAB based on tab
+        // Restore FAB based on current active tab
         if (els['fab-plus']) {
-            els['fab-plus'].style.display = (currentTab === 'list') ? 'flex' : 'none';
+            els['fab-plus'].style.display = (currentTab === 'draft' || currentTab === 'list') ? 'flex' : 'none';
             els['fab-plus'].classList.remove('hidden');
         }
         renderList();
@@ -628,13 +628,15 @@ function renderGeppoFields() {
                     ${i < 30 ? `<button type="button" class="btn-copy-next" onclick="window.copyRowToNext(${i})" style="font-size:0.7rem; color:#2563eb; background:none; border:none; text-decoration:underline;">↓次へコピー</button>` : ''}
                 </div>
                 
-                <div class="geppo-field-unit" style="margin-bottom:12px;">
-                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">日 (数字のみ)</label>
-                    <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="${i + 1}">
-                </div>
-                <div class="geppo-field-unit" style="margin-bottom:12px;">
-                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">会社名</label>
-                    <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}">
+                <div style="display:flex; gap:10px; margin-bottom:12px;">
+                    <div style="width:70px;">
+                        <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">日</label>
+                        <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">会社名</label>
+                        <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}">
+                    </div>
                 </div>
                 <div class="geppo-field-unit" style="margin-bottom:12px;">
                     <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">現場名</label>

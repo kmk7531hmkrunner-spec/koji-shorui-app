@@ -91,16 +91,17 @@ function bindEvents() {
         renderEditorCanvas(e.target.value);
     });
 
-    // CRITICAL: Force editor canvas to match image aspect ratio for perfect coordinate sync
+    // CRITICAL FIX: Force editor canvas to match the FIXED A4 aspect ratio (210/297)
+    // This MUST match the CANVAS_WIDTH/HEIGHT used in src/pdf-engine.js to ensure perfect coordinate sync.
     editorTemplateImg.onload = () => {
-        const containerWidth = 800; // Base width for layout calculation
-        const imgRatio = editorTemplateImg.naturalWidth / editorTemplateImg.naturalHeight;
+        const containerWidth = 800; // Base width for display
+        const A4_RATIO = 210 / 297; 
         
-        // We set the AREA size, not just the background
+        // Force the AREA (the coordinate plane) to A4 proportions
         editorCanvasArea.style.width = containerWidth + 'px';
-        editorCanvasArea.style.height = (containerWidth / imgRatio) + 'px';
+        editorCanvasArea.style.height = (containerWidth / A4_RATIO) + 'px';
         
-        logDebug(`Canvas Synced: ${editorCanvasArea.style.width} x ${editorCanvasArea.style.height}`);
+        logDebug(`Canvas Synced to A4: ${editorCanvasArea.style.width} x ${editorCanvasArea.style.height}`);
         
         if (isRealPreviewMode) updateRealPreview();
     };
