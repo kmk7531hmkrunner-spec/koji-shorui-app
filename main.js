@@ -111,54 +111,46 @@ async function init() {
 // --- List View Logic ---
 
 async function renderList() {
-    let projects = await getAllProjects();
-    
-    // Normalization helper (Full-width -> Half-width, Lowercase)
-    const normalize = (val) => String(val || "").normalize("NFKC").toLowerCase();
-    
-    // Filter by search query
-    if (searchQuery) {
-        const q = normalize(searchQuery);
-        projects = projects.filter(p => {
-            const fd = p.formData || {};
-            const content = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content} ${fd.dailyReport}`;
-            return normalize(content).includes(q);
-        });
-    }
-
-    // NEW APPROACH: Hide all views first
+    // Hide all views first
     Object.values(els).forEach(el => {
         if (el && el.classList && el.classList.contains('view')) {
             el.classList.add('hidden');
         }
     });
 
+    const projects = await getAllProjects();
+    
     if (currentTab === 'sent') {
         if (els['calendar-view']) els['calendar-view'].classList.remove('hidden');
-        renderCalendar(projects);
-    } else {
-        if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
-        renderListContent(projects);
-    }
-}
-
-async function renderListContent(projects) {
-    if (!els['project-list']) return;
-    const filtered = projects.filter(p => p.status === currentTab);
-    if (filtered.length === 0) {
-        els['project-list'].innerHTML = `<div class="empty-state"><p>${currentTab === 'draft' ? '下書きはありません' : '書類はありません'}</p></div>`;
-        updateSelectionUI();
-        return;
-    }
-    // ... rest of list rendering logic ...
-
-    if (filtered.length === 0) {
-        els['project-list'].innerHTML = `<div class="empty-state"><p>${currentTab === 'draft' ? '下書きはありません' : '書類はありません'}</p></div>`;
-        updateSelectionUI();
+        if (typeof renderCalendar === 'function') renderCalendar(projects);
         return;
     }
 
-    els['project-list'].innerHTML = filtered.map(p => {
+    if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
+    
+    const listContainer = els['project-list'];
+    if (!listContainer) return;
+
+    let filtered = projects.filter(p => p.status === 'draft');
+
+    // Filter by search query
+    if (searchQuery) {
+        const normalize = (val) => String(val || "").normalize("NFKC").toLowerCase();
+        const q = normalize(searchQuery);
+        filtered = filtered.filter(p => {
+            const fd = p.formData || {};
+            const content = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content} ${fd.dailyReport}`;
+            return normalize(content).includes(q);
+        });
+    }
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = `<div class="empty-state" style="padding:40px; text-align:center; color:#94a3b8;"><p>下書きはありません</p></div>`;
+        updateSelectionUI();
+        return;
+    }
+
+    listContainer.innerHTML = filtered.map(p => {
         const fd = p.formData || {};
         const dateStr = p.date ? p.date.split('-').slice(1).join('/') : '--/--';
         const isSelected = selectedIds.has(p.id);
@@ -387,13 +379,13 @@ window.confirmGeneratePdf = (id) => {
     
     modal.classList.remove('hidden');
 
-    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.hidden = true;
     document.getElementById('btn-pdf-exec').onclick = () => {
         const name = nameInput.value.trim();
         if (!name) { alert('氏名を入力してください'); return; }
         
         localStorage.setItem('last_user_name', name);
-        modal.classList.remove('hidden');
+        modal.classList.add('hidden');
         
         generatePdf(id, name, typeSelect.value);
     };
