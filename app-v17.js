@@ -12,10 +12,11 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build)...");
+console.log("Main script loading (Intelligent Workflow Build v17)...");
 
 // --- Global State & Setup ---
-let els = {}; 
+window.els = {};
+const els = window.els;
 let currentTab = 'draft'; // 'draft' or 'sent'
 let searchQuery = '';
 let isSelectionMode = false;
