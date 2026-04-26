@@ -22,6 +22,9 @@ let isSelectionMode = false;
 let selectedIds = new Set();
 let longPressTimeout = null;
 let isLongPressAction = false;
+let searchQuery = "";
+let currentCalendarDate = new Date();
+let selectedCalendarDate = null; // YYYY-MM-DD
 
 // --- Initialization ---
 async function startApp() {
@@ -92,23 +95,45 @@ async function init() {
     } catch (err) {
         if (window.logBoot) window.logBoot("LIST RENDER FAILED: " + err.message);
         console.error("List render failed", err);
-        if (els['project-list']) {
-            els['project-list'].innerHTML = '<div class="error-msg">データの読み込みに失敗しました。再起動してください。</div>';
-        }
+    }
+
+    // 3. Bind Search Input
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.oninput = (e) => {
+            searchQuery = e.target.value;
+            renderList();
+        };
     }
 }
 
 // --- List View Logic ---
 
-async function renderList() {
-    if (!els['project-list']) return;
-    els['project-list'].innerHTML = '<div class="loading">読み込み中...</div>';
+    let projects = await getAllProjects();
+    
+    // Filter by search query
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        projects = projects.filter(p => {
+            const fd = p.formData || {};
+            const searchStr = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content}`.toLowerCase();
+            return searchStr.includes(q);
+        });
+    }
 
-    const projects = await getAllProjects();
+    if (currentTab === 'sent') {
+        renderCalendar(projects);
+        return;
+    }
+    
+    // Switch UI
+    if (els['project-list']) els['project-list'].classList.remove('hidden');
+    if (els['calendar-view']) els['calendar-view'].classList.add('hidden');
+
     const filtered = projects.filter(p => p.status === currentTab);
 
     if (filtered.length === 0) {
-        els['project-list'].innerHTML = `<div class="empty-state"><p>${currentTab === 'draft' ? '下書きはありません' : '完了済みの書類はありません'}</p></div>`;
+        els['project-list'].innerHTML = `<div class="empty-state"><p>${currentTab === 'draft' ? '下書きはありません' : '書類はありません'}</p></div>`;
         updateSelectionUI();
         return;
     }
@@ -126,13 +151,7 @@ async function renderList() {
                 <div class="info-row"><strong>担当者:</strong> ${fd.supervisorName || '(未入力)'}</div>
                 <div class="info-row"><strong>現場名:</strong> ${displaySite}</div>
             `;
-        } else if (p.type === 'kanryo') {
-            mainInfoHtml = `
-                <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
-                <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
-            `;
         } else {
-            // Geppo or others
             mainInfoHtml = `
                 <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
                 <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
@@ -140,7 +159,7 @@ async function renderList() {
         }
 
         return `
-            <div class="project-card ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
+            <div class="project-card fade-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
                 <div class="project-card-body">
                     <div class="project-card-header">
                         <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
@@ -151,12 +170,12 @@ async function renderList() {
                     </div>
                     <div class="project-card-footer">
                         ${p.type === 'geppo' ? `<span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>` : ''}
-                        <span class="card-hint">タップでプレビュー確認</span>
+                        <span class="card-hint">タップで詳細・プレビュー</span>
                     </div>
                 </div>
                 <div class="project-card-actions">
-                    ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="window.confirmGeneratePdf('${p.id}')">📄<br>PDF</button>` : ''}
-                    <button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>編集</button>
+                    ${p.status === 'draft' ? `<button class="card-action-btn pdf" onclick="window.confirmGeneratePdf('${p.id}')">📄<br>PDF</button>` : `<button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>再編集</button>`}
+                    ${p.status === 'draft' ? `<button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>編集</button>` : ''}
                     <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
                 </div>
             </div>
@@ -194,6 +213,106 @@ function enterSelectionMode(firstId) { isSelectionMode = true; selectedIds.add(f
 function toggleSelection(id) { if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); if (selectedIds.size === 0) exitSelectionMode(); else renderList(); }
 function exitSelectionMode() { isSelectionMode = false; selectedIds.clear(); renderList(); }
 
+// --- Calendar Logic ---
+
+function renderCalendar(allProjects) {
+    if (els['project-list']) els['project-list'].classList.add('hidden');
+    if (els['calendar-view']) els['calendar-view'].classList.remove('hidden');
+
+    const sentProjects = allProjects.filter(p => p.status === 'sent');
+    const container = els['calendar-view'];
+    const header = document.getElementById('calendar-header');
+    const grid = document.getElementById('calendar-grid');
+
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+
+    header.innerHTML = `
+        <button onclick="window.changeCalendarMonth(-1)">◀</button>
+        <span>${year}年 ${month + 1}月</span>
+        <button onclick="window.changeCalendarMonth(1)">▶</button>
+    `;
+
+    // Calendar Grid
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    let gridHtml = ['日','月','火','水','木','金','土'].map(d => `<div class="calendar-day-label">${d}</div>`).join('');
+    
+    for (let i = 0; i < firstDay; i++) gridHtml += `<div class="calendar-day other-month"></div>`;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayProjects = sentProjects.filter(p => p.date === dateKey);
+        const isToday = new Date().toISOString().split('T')[0] === dateKey;
+        const isSelected = selectedCalendarDate === dateKey;
+        
+        gridHtml += `
+            <div class="calendar-day ${isToday ? 'today' : ''} ${dayProjects.length > 0 ? 'has-data' : ''} ${isSelected ? 'selected' : ''}" 
+                 onclick="window.selectCalendarDate('${dateKey}')">
+                ${day}
+            </div>
+        `;
+    }
+    grid.innerHTML = gridHtml;
+    
+    // Render Day List
+    renderCalendarDayList(sentProjects);
+}
+
+window.changeCalendarMonth = (dir) => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
+    renderList();
+};
+
+window.selectCalendarDate = (date) => {
+    selectedCalendarDate = date;
+    renderList();
+};
+
+function renderCalendarDayList(sentProjects) {
+    const listContainer = document.getElementById('calendar-day-list');
+    if (!selectedCalendarDate) {
+        listContainer.innerHTML = '<p class="empty-state">日付を選択してください</p>';
+        return;
+    }
+
+    const dayProjects = sentProjects.filter(p => p.date === selectedCalendarDate);
+    if (dayProjects.length === 0) {
+        listContainer.innerHTML = `<p class="empty-state">${selectedCalendarDate} の書類はありません</p>`;
+        return;
+    }
+
+    listContainer.innerHTML = `<h4>${selectedCalendarDate} の書類 (${dayProjects.length}件)</h4>` + dayProjects.map(p => {
+        const isSelected = selectedIds.has(p.id);
+        return `
+            <div class="project-card scale-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}">
+                <div class="project-card-body">
+                    <div class="project-card-header">
+                        <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : '完了/丸産'}</span>
+                    </div>
+                    <div class="info-row"><strong>監督:</strong> ${p.formData.supervisorName || ''}</div>
+                    <div class="info-row"><strong>現場:</strong> ${p.formData.siteName || ''}</div>
+                </div>
+                <div class="project-card-actions">
+                    <button class="card-action-btn edit" onclick="window.editProject('${p.id}')">✏️<br>再編集</button>
+                    <button class="card-action-btn delete" onclick="window.confirmDeleteProject('${p.id}')">🗑<br>削除</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Bind long press for calendar items
+    listContainer.querySelectorAll('.project-card').forEach(card => {
+        const id = card.dataset.id;
+        card.onmousedown = card.ontouchstart = () => {
+            longPressTimeout = setTimeout(() => { enterSelectionMode(id); }, 700);
+        };
+        card.onmouseup = card.ontouchend = () => clearTimeout(longPressTimeout);
+        card.onclick = () => { if(isSelectionMode) toggleSelection(id); else window.handleCardPreview(id); };
+    });
+}
+
 // --- Preview & Action Logic ---
 
 window.handleCardPreview = async (id) => {
@@ -224,9 +343,25 @@ window.handleCardPreview = async (id) => {
 };
 
 window.confirmGeneratePdf = (id) => {
-    if (confirm('この書類をPDF出力し、「完了」へ移動しますか？')) {
-        generatePdf(id);
-    }
+    const modal = document.getElementById('pdf-filename-modal');
+    const nameInput = document.getElementById('pdf-user-name');
+    const typeSelect = document.getElementById('pdf-doc-type');
+    
+    // Auto-fill remembered name
+    nameInput.value = localStorage.getItem('last_user_name') || '';
+    
+    modal.classList.remove('hidden');
+
+    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-pdf-exec').onclick = () => {
+        const name = nameInput.value.trim();
+        if (!name) { alert('氏名を入力してください'); return; }
+        
+        localStorage.setItem('last_user_name', name);
+        modal.classList.add('hidden');
+        
+        generatePdf(id, name, typeSelect.value);
+    };
 };
 
 window.editProject = async (id) => {
@@ -445,6 +580,12 @@ function syncDataToProject() {
 async function handleSaveDraft() {
     syncDataToProject();
     currentProject.displayTitle = generateDraftName(currentProject.date, currentProject.workerName);
+    
+    // If it was 'sent', move it back to 'draft'
+    if (currentProject.status === 'sent') {
+        currentProject.status = 'draft';
+    }
+    
     await saveProject(currentProject);
     els['form-view'].classList.add('hidden');
     els['project-list-view'].classList.remove('hidden');
@@ -519,17 +660,43 @@ function bindGlobalEvents() {
 }
 
 function updateSelectionUI() {
-    const bulkContainer = document.getElementById('top-bulk-container');
     const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
-    if (!bulkContainer || !bulkBtn) return;
+    if (!bulkBtn) return;
     
-    if (isSelectionMode && selectedIds.size > 0) {
-        bulkBtn.textContent = `📄 ${selectedIds.size}件を複数選択（まとめてPDF）`;
+    if (currentTab === 'sent') {
+        if (isSelectionMode && selectedIds.size > 0) {
+            bulkBtn.textContent = `🗑 ${selectedIds.size}件をまとめて削除`;
+            bulkBtn.classList.add('btn-danger');
+            bulkBtn.classList.remove('hidden');
+            bulkBtn.onclick = handleBulkDelete;
+        } else {
+            bulkBtn.classList.add('hidden');
+        }
         if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
     } else {
-        bulkBtn.textContent = `📄 複数選択（まとめてPDF）`;
-        if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
+        bulkBtn.classList.remove('btn-danger', 'hidden');
+        bulkBtn.onclick = handleBulkPdf;
+        if (isSelectionMode && selectedIds.size > 0) {
+            bulkBtn.textContent = `📄 ${selectedIds.size}件を複数選択（まとめてPDF）`;
+            if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
+        } else {
+            bulkBtn.textContent = `📄 複数選択（まとめてPDF）`;
+            if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
+        }
     }
+}
+
+async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`${selectedIds.size}件の書類をすべて削除しますか？\nこの操作は取り消せません。`)) return;
+    
+    for (const id of selectedIds) {
+        await deleteProject(id);
+    }
+    
+    exitSelectionMode();
+    renderList();
+    alert('削除が完了しました');
 }
 
 async function handleBulkPdf() {
@@ -628,12 +795,20 @@ async function startScanner(file) {
 
 async function handleDeleteProject(id) { await deleteProject(id); await renderList(); }
 
-async function generatePdf(id) {
+async function generatePdf(id, userName, docTypeName) {
     const p = await getProject(id); if (!p) return;
     const bgUrl = p.type === 'kanryo' ? '/images/kanrryoutemp.jpg' : (p.type === 'marusan' ? '/images/marusan_report.jpg' : '/images/geppo.jpg');
     const config = await getPdfConfig();
     const doc = await generateSinglePdf(p, bgUrl, config);
-    doc.save(`${p.displayTitle}.pdf`);
+    
+    // Format: yyyy_mm_dd_"名前"_"作成書類名"
+    const now = new Date(p.date || Date.now());
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const filename = `${y}_${m}_${d}_${userName}_${docTypeName}.pdf`;
+    
+    doc.save(filename);
     
     // Automatically move to 'sent' after individual PDF output
     if (p.status === 'draft') {

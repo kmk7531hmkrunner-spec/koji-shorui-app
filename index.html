@@ -23,8 +23,14 @@
 </head>
 <body>
     <div id="app">
+        <!-- Top Search Bar -->
+        <div id="search-container" class="search-container">
+            <i class="search-icon">🔍</i>
+            <input type="text" id="search-input" placeholder="書類を検索（会社名、監督名、現場名...）">
+        </div>
+
         <!-- Project List View -->
-        <div id="project-list-view">
+        <div id="project-list-view" class="view-content fade-in">
             <header class="app-header app-header-logo">
                 <div class="app-logo-wrapper">
                     <h1 class="app-logo"><span>PRO</span>.DOC</h1>
@@ -142,7 +148,28 @@
         </div>
     </div> <!-- end #app -->
 
-    <!-- Startup Debugger (Hardened) -->
+    <!-- PDF Filename Modal -->
+    <div id="pdf-filename-modal" class="modal-overlay hidden">
+        <div class="modal-content scale-in">
+            <h3 class="modal-title">PDF出力設定</h3>
+            <div class="form-group">
+                <label class="label">氏名 (保存されます)</label>
+                <input type="text" id="pdf-user-name" placeholder="名前を入力">
+            </div>
+            <div class="form-group">
+                <label class="label">書類種別</label>
+                <select id="pdf-doc-type">
+                    <option value="完了報告書">完了報告書</option>
+                    <option value="月報">月報</option>
+                    <option value="丸産報告書">丸産報告書</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="btn-pdf-cancel">キャンセル</button>
+                <button class="btn btn-primary" id="btn-pdf-exec">出力する</button>
+            </div>
+        </div>
+    </div>
     <script>
         window.APP_STARTUP_LOG = ["System boot started"];
         window.logBoot = function(msg) {
