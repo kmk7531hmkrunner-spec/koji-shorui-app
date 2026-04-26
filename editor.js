@@ -91,6 +91,20 @@ function bindEvents() {
         renderEditorCanvas(e.target.value);
     });
 
+    // CRITICAL: Force editor canvas to match image aspect ratio for perfect coordinate sync
+    editorTemplateImg.onload = () => {
+        const containerWidth = 800; // Base width for layout calculation
+        const imgRatio = editorTemplateImg.naturalWidth / editorTemplateImg.naturalHeight;
+        
+        // We set the AREA size, not just the background
+        editorCanvasArea.style.width = containerWidth + 'px';
+        editorCanvasArea.style.height = (containerWidth / imgRatio) + 'px';
+        
+        logDebug(`Canvas Synced: ${editorCanvasArea.style.width} x ${editorCanvasArea.style.height}`);
+        
+        if (isRealPreviewMode) updateRealPreview();
+    };
+
     addSafeListener(fontSizeSlider, 'input', (e) => updateSelectedField('fontSize', parseInt(e.target.value)));
     addSafeListener(widthSizeSlider, 'input', (e) => updateSelectedField('width', parseInt(e.target.value)));
     addSafeListener(heightRatioSlider, 'input', (e) => updateSelectedField('heightRatio', parseFloat(e.target.value)));
@@ -557,7 +571,8 @@ function updateSelectedField(prop, value) {
             inputWidth.value = value;
         }
         if (prop === 'heightRatio') {
-            label.style.aspectRatio = `1 / ${value}`;
+            const label = editorCanvasArea.querySelector(`.draggable-label[data-id="${selectedFieldId}"]`);
+            if (label) label.style.aspectRatio = `1 / ${value}`;
             heightRatioSlider.value = value;
             inputHeightRatio.value = value;
         }

@@ -618,11 +618,6 @@ function renderGeppoFields() {
         </div>
 
         <div class="geppo-rows-list">
-            <div style="padding: 15px; background: #fff7ed; border: 2px solid #fb923c; border-radius: 12px; margin-bottom: 25px; font-size: 0.9rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                <div style="color: #9a3412; font-weight: bold; margin-bottom:8px;">💡 全行コピー機能</div>
-                <div style="color: #c2410c; margin-bottom:12px; font-size:0.8rem;">1行目を入力後にボタンを押すと、全ての行に内容を反映できます。</div>
-                <button type="button" class="btn btn-primary" onclick="window.copyFirstGeppoRow()" style="width:100%; background:#ea580c; border:none; height:45px; font-weight:bold;">1行目の内容を全行にコピー</button>
-            </div>
     `;
 
     for (let i = 0; i < 31; i++) {
@@ -633,30 +628,24 @@ function renderGeppoFields() {
                     ${i < 30 ? `<button type="button" class="btn-copy-next" onclick="window.copyRowToNext(${i})" style="font-size:0.7rem; color:#2563eb; background:none; border:none; text-decoration:underline;">↓次へコピー</button>` : ''}
                 </div>
                 
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <div style="width:50px;">
-                        <label style="font-size:0.7rem; color:#64748b;">日</label>
-                        <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="${i + 1}">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:0.7rem; color:#64748b;">会社名</label>
-                        <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}">
-                    </div>
+                <div class="geppo-field-unit" style="margin-bottom:12px;">
+                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">日 (数字のみ)</label>
+                    <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="${i + 1}">
                 </div>
-
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <div style="flex:1;">
-                        <label style="font-size:0.7rem; color:#64748b;">現場名</label>
-                        <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:0.7rem; color:#64748b;">監督名</label>
-                        <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}">
-                    </div>
+                <div class="geppo-field-unit" style="margin-bottom:12px;">
+                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">会社名</label>
+                    <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}">
                 </div>
-
-                <div>
-                    <label style="font-size:0.7rem; color:#64748b;">住所</label>
+                <div class="geppo-field-unit" style="margin-bottom:12px;">
+                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">現場名</label>
+                    <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}">
+                </div>
+                <div class="geppo-field-unit" style="margin-bottom:12px;">
+                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">監督名</label>
+                    <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}">
+                </div>
+                <div class="geppo-field-unit">
+                    <label style="font-size:0.75rem; color:#64748b; font-weight:bold; display:block; margin-bottom:4px;">住所</label>
                     <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}">
                 </div>
             </div>
