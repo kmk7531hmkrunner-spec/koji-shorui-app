@@ -445,9 +445,9 @@ function renderForm() {
             <div id="dynamic-form-fields">
                 ${currentProject.type === 'kanryo' ? renderKanryoFields() : (currentProject.type === 'marusan' ? renderMarusanFields() : renderGeppoFields())}
             </div>
-            <div class="form-actions-bottom" style="margin-bottom: 2rem; display: flex; gap: 10px;">
-                <button class="btn btn-outline" id="btn-preview-doc" style="flex:1;">プレビュー</button>
-                <button class="btn btn-primary" id="btn-save-draft" style="flex:1;">下書き保存</button>
+            <div class="form-actions-bottom" style="margin-top: 2rem; margin-bottom: 4rem; display: flex; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 2rem;">
+                <button class="btn btn-outline" id="btn-preview-doc" style="flex:1; height: 50px;">プレビュー</button>
+                <button class="btn btn-primary" id="btn-save-draft" style="flex:1; height: 50px;">下書き保存</button>
             </div>
         </div>
     `;
@@ -628,6 +628,7 @@ function syncDataToProject() {
 }
 
 async function handleSaveDraft() {
+    console.log('Starting save process for project:', currentProject.id);
     syncDataToProject();
     currentProject.displayTitle = generateDraftName(currentProject.date, currentProject.workerName);
     
@@ -636,10 +637,19 @@ async function handleSaveDraft() {
         currentProject.status = 'draft';
     }
     
-    await saveProject(currentProject);
-    els['form-view'].classList.add('hidden');
-    els['project-list-view'].classList.remove('hidden');
-    renderList();
+    try {
+        await saveProject(currentProject);
+        console.log('Project saved successfully');
+        alert('保存しました');
+        
+        // Hide form and show list
+        if(els['form-view']) els['form-view'].classList.add('hidden');
+        if(els['project-list-view']) els['project-list-view'].classList.remove('hidden');
+        renderList();
+    } catch (err) {
+        console.error('Save failed:', err);
+        alert('保存に失敗しました: ' + err.message);
+    }
 }
 
 async function handleShowPreview() {
@@ -688,6 +698,12 @@ function bindGlobalEvents() {
                 els.tabsList.forEach(t => t.classList.remove('active')); 
                 tab.classList.add('active'); 
                 currentTab = tab.dataset.tab; 
+                
+                // FAB button visibility: Only on 'list' (Draft) tab
+                if (els['fab-plus']) {
+                    els['fab-plus'].style.display = (currentTab === 'list') ? 'flex' : 'none';
+                }
+                
                 renderList(); 
             }; 
         });

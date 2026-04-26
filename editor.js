@@ -252,13 +252,13 @@ function bindEvents() {
         }
     });
 
-    // Geppo Live Interval Step Buttons
+    // Geppo Live Interval Step Buttons (Narrowed to 0.05 step)
     document.querySelectorAll('.btn-interval-step').forEach(btn => {
         addSafeListener(btn, 'click', () => {
             const input = document.getElementById('geppo-row-interval');
             const dir = btn.dataset.dir === 'up' ? 1 : -1;
-            const newVal = Math.max(0, parseFloat(input.value || 0) + (dir * 0.1));
-            input.value = newVal.toFixed(1);
+            const newVal = Math.max(0, parseFloat(input.value || 0) + (dir * 0.05));
+            input.value = newVal.toFixed(2); // Show 2 decimal places for 0.05
             // Trigger the input event to run the live spacing logic
             input.dispatchEvent(new Event('input'));
         });
