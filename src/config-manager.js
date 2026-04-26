@@ -8,9 +8,9 @@ const geppoFields = [
   { id: "geppo_month", label: "月", x: 25, y: 5, fontSize: 12, width: 10 }
 ];
 
-// Generate 30 rows for Geppo
-for (let i = 0; i < 30; i++) {
-  const yBase = 15 + (i * 2.5); // Initial estimate
+// Generate 31 rows for Geppo (Enhanced for precision)
+for (let i = 0; i < 31; i++) {
+  const yBase = 15 + (i * 8); // Reset base for clean adjustment
   geppoFields.push({ id: `row_${i}_day`, label: `${i+1}日`, x: 5, y: yBase, fontSize: 9, width: 5 });
   geppoFields.push({ id: `row_${i}_company`, label: `(行${i+1})会社名`, x: 12, y: yBase, fontSize: 9, width: 15 });
   geppoFields.push({ id: `row_${i}_site`, label: `(行${i+1})現場名`, x: 30, y: yBase, fontSize: 9, width: 25 });

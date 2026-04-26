@@ -534,21 +534,22 @@ function renderGeppoFields() {
     const fd = currentProject.formData || {};
     let rowsHtml = '';
     for (let i = 0; i < 31; i++) {
-    rowsHtml += `
-        <div class="geppo-row" style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
-            <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-                <span style="font-weight:bold; color:var(--accent-gold); width:30px;">${i+1}</span>
-                <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="日" style="width:50px;">
-                <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}" placeholder="会社名" style="flex:2;">
-                <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}" placeholder="監督名" style="flex:1;">
+        rowsHtml += `
+            <div class="geppo-row" style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#fff' : '#f8fafc'}; position: relative;">
+                <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                    <span style="font-weight:bold; color:var(--accent-gold); width:25px;">${i+1}</span>
+                    <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="日" style="width:40px;">
+                    <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}" placeholder="会社名" style="flex:2;">
+                    <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}" placeholder="監督" style="flex:1;">
+                    ${i < 30 ? `<button type="button" class="btn btn-sm btn-outline" style="padding: 2px 5px; font-size: 10px;" onclick="window.copyRowToNext(${i})">↓次へ</button>` : ''}
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}" placeholder="現場名" style="flex:1;">
+                    <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}" placeholder="住所" style="flex:1.5;">
+                </div>
             </div>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}" placeholder="現場名" style="flex:1;">
-                <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}" placeholder="住所" style="flex:1.5;">
-            </div>
-        </div>
-    `;
-}
+        `;
+    }
 
     return `
         <div class="form-section">
@@ -907,6 +908,29 @@ function handleReEditReceipt() {
     const btn = document.getElementById('btn-scan-receipt');
     if (btn) btn.click();
 }
+
+window.copyRowToNext = (idx) => {
+    const day = document.getElementById(`field-row_${idx}_day`)?.value || '';
+    const company = document.getElementById(`field-row_${idx}_company`)?.value || '';
+    const supervisor = document.getElementById(`field-row_${idx}_supervisor`)?.value || '';
+    const site = document.getElementById(`field-row_${idx}_site`)?.value || '';
+    const address = document.getElementById(`field-row_${idx}_address`)?.value || '';
+    
+    const nextIdx = idx + 1;
+    if (nextIdx >= 31) return;
+
+    const nextC = document.getElementById(`field-row_${nextIdx}_company`);
+    const nextS = document.getElementById(`field-row_${nextIdx}_supervisor`);
+    const nextSt = document.getElementById(`field-row_${nextIdx}_site`);
+    const nextAd = document.getElementById(`field-row_${nextIdx}_address`);
+    const nextD = document.getElementById(`field-row_${nextIdx}_day`);
+
+    if (nextC) nextC.value = company;
+    if (nextS) nextS.value = supervisor;
+    if (nextSt) nextSt.value = site;
+    if (nextAd) nextAd.value = address;
+    if (nextD && day) nextD.value = parseInt(day) + 1; // Increment day if possible
+};
 
 window.copyFirstGeppoRow = () => {
     const company = document.getElementById('field-row_0_company')?.value || '';
