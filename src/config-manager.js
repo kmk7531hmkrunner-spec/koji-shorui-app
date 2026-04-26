@@ -9,15 +9,15 @@ const geppoFields = [
   { id: "workerName", label: "氏名", x: 40, y: 5, fontSize: 12, width: 20 }
 ];
 
-// Restore 31 rows for Geppo.
-// Note: Row 0 is the master; Rows 1-30 will inherit its properties in getPdfConfig.
+// Duplicated 31 rows based on the user's manual 1st row adjustments.
+// Applied derived coordinates: Day(20.2), Co(23.3), Site(41.2), Sup(59.1), Addr(74.0)
 for (let i = 0; i < 31; i++) {
-  const yBase = 15 + (i * 2.5);
-  geppoFields.push({ id: `row_${i}_day`, label: `${i+1}日`, x: 5, y: yBase, fontSize: 9, width: 5 });
-  geppoFields.push({ id: `row_${i}_company`, label: `(行${i+1})会社名`, x: 12, y: yBase, fontSize: 9, width: 15 });
-  geppoFields.push({ id: `row_${i}_site`, label: `(行${i+1})現場名`, x: 30, y: yBase, fontSize: 9, width: 25 });
-  geppoFields.push({ id: `row_${i}_supervisor`, label: `(行${i+1})監督名`, x: 60, y: yBase, fontSize: 9, width: 10 });
-  geppoFields.push({ id: `row_${i}_address`, label: `(行${i+1})住所`, x: 75, y: yBase, fontSize: 9, width: 20 });
+  const yBase = 15.0 + (i * 2.5);
+  geppoFields.push({ id: `row_${i}_day`, label: `${i+1}日`, x: 20.2, y: yBase, fontSize: 9, width: 2.2, align: 'center' });
+  geppoFields.push({ id: `row_${i}_company`, label: `(行${i+1})会社名`, x: 23.3, y: yBase, fontSize: 9, width: 17.5 });
+  geppoFields.push({ id: `row_${i}_site`, label: `(行${i+1})現場名`, x: 41.2, y: yBase, fontSize: 9, width: 17.5 });
+  geppoFields.push({ id: `row_${i}_supervisor`, label: `(行${i+1})監督名`, x: 59.1, y: yBase, fontSize: 9, width: 14.5 });
+  geppoFields.push({ id: `row_${i}_address`, label: `(行${i+1})住所`, x: 74.0, y: yBase, fontSize: 9, width: 24.5 });
 }
 
 const DEFAULT_CONFIG = {
