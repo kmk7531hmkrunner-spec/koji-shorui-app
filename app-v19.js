@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v18)...");
+console.log("Main script loading (Intelligent Workflow Build v19)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -145,9 +145,18 @@ async function renderList() {
     
     const listContainer = els['project-list'];
     if (!listContainer) return;
-    listContainer.classList.remove('hidden'); // Ensure it's never hidden by other logic
-
     let filtered = projects.filter(p => p.status === 'draft');
+
+    // Pre-calculate Monthly Report numbering for duplicates
+    const geppoCounts = {}; 
+    // Sort geppo by date to ensure consistent numbering
+    const sortedGeppo = [...filtered].filter(p => p.type === 'geppo').sort((a,b) => a.id.localeCompare(b.id));
+    const geppoLabels = {}; // ProjectID -> Label
+    sortedGeppo.forEach(p => {
+        const ym = p.date ? p.date.substring(0, 7).replace('-', '年') + '月' : '時期未定';
+        geppoCounts[ym] = (geppoCounts[ym] || 0) + 1;
+        geppoLabels[p.id] = geppoCounts[ym] > 1 ? `${ym} (${geppoCounts[ym]}枚目)` : ym;
+    });
 
     // Filter by search query
     if (searchQuery) {
@@ -179,6 +188,11 @@ async function renderList() {
                 <div class="info-row"><strong>担当者:</strong> ${fd.supervisorName || '(未入力)'}</div>
                 <div class="info-row"><strong>現場名:</strong> ${displaySite}</div>
             `;
+        } else if (p.type === 'geppo') {
+            mainInfoHtml = `
+                <div class="info-row"><strong>年月:</strong> ${geppoLabels[p.id]}</div>
+                <div class="info-row"><strong>作業者:</strong> ${p.workerName || fd.workerName || '(未入力)'}</div>
+            `;
         } else {
             mainInfoHtml = `
                 <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
@@ -197,7 +211,6 @@ async function renderList() {
                         ${mainInfoHtml}
                     </div>
                     <div class="project-card-footer">
-                        ${p.type === 'geppo' ? `<span class="project-worker">👤 ${p.workerName || '担当者未設定'}</span>` : ''}
                         <span class="card-hint">タップで詳細・プレビュー</span>
                     </div>
                 </div>
@@ -392,7 +405,7 @@ window.confirmGeneratePdf = (id) => {
     
     modal.classList.remove('hidden');
 
-    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.hidden = true;
+    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.add('hidden');
     document.getElementById('btn-pdf-exec').onclick = () => {
         const name = nameInput.value.trim();
         if (!name) { alert('氏名を入力してください'); return; }
@@ -759,6 +772,7 @@ function bindGlobalEvents() {
 
 function updateSelectionUI() {
     const bulkBtn = document.getElementById('btn-bulk-pdf-exec');
+    const bulkDeleteBtn = document.getElementById('btn-bulk-delete-exec');
     if (!bulkBtn) return;
     
     if (currentTab === 'sent') {
@@ -775,10 +789,15 @@ function updateSelectionUI() {
         bulkBtn.classList.remove('btn-danger', 'hidden');
         bulkBtn.onclick = handleBulkPdf;
         if (isSelectionMode && selectedIds.size > 0) {
-            bulkBtn.textContent = `📄 ${selectedIds.size}件を複数選択（まとめてPDF）`;
+            bulkBtn.textContent = `📄 ${selectedIds.size}件をまとめてPDF`;
+            if (bulkDeleteBtn) {
+                bulkDeleteBtn.classList.remove('hidden');
+                bulkDeleteBtn.onclick = handleBulkDelete;
+            }
             if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
         } else {
             bulkBtn.textContent = `📄 複数選択（まとめてPDF）`;
+            if (bulkDeleteBtn) bulkDeleteBtn.classList.add('hidden');
             if (els['fab-plus']) els['fab-plus'].classList.remove('hidden');
         }
     }
@@ -803,6 +822,29 @@ async function handleBulkPdf() {
         renderList();
         return;
     }
+    if (selectedIds.size === 0) return;
+
+    const modal = document.getElementById('pdf-filename-modal');
+    const nameInput = document.getElementById('pdf-user-name');
+    const typeSelect = document.getElementById('pdf-doc-type');
+    
+    nameInput.value = localStorage.getItem('last_user_name') || '';
+    modal.classList.remove('hidden');
+
+    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-pdf-exec').onclick = async () => {
+        const name = nameInput.value.trim();
+        if (!name) { alert('氏名を入力してください'); return; }
+        
+        localStorage.setItem('last_user_name', name);
+        modal.classList.add('hidden');
+        
+        const ids = Array.from(selectedIds);
+        await generateBulkPdf(ids, name, typeSelect.value);
+        exitSelectionMode();
+        renderList();
+    };
+}
     if (selectedIds.size === 0) {
         alert('作成する書類を1つ以上選択してください。');
         return;

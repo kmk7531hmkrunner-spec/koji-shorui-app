@@ -49,9 +49,14 @@
         <div id="project-list-view" class="view-container fade-in">
             <!-- Permanent Top Bulk Action Area -->
             <div id="top-bulk-container" class="top-bulk-container">
-                <button class="btn btn-primary btn-bulk-top" id="btn-bulk-pdf-exec">
-                    📄 複数選択してまとめてPDFを作成
-                </button>
+                <div class="bulk-btns-row">
+                    <button class="btn btn-primary btn-bulk-top" id="btn-bulk-pdf-exec">
+                        📄 まとめてPDF
+                    </button>
+                    <button class="btn btn-danger btn-bulk-top hidden" id="btn-bulk-delete-exec">
+                        🗑 まとめて削除
+                    </button>
+                </div>
             </div>
 
             <div id="project-list" class="project-list"></div>
@@ -166,9 +171,8 @@
             <div class="form-group">
                 <label class="label">書類種別</label>
                 <select id="pdf-doc-type">
-                    <option value="完了報告書">完了報告書</option>
+                    <option value="完了報告書">完了（丸産含む）</option>
                     <option value="月報">月報</option>
-                    <option value="丸産報告書">丸産報告書</option>
                 </select>
             </div>
             <div class="modal-actions">
@@ -205,6 +209,6 @@
         });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script type="module" src="app-v18.js?v=20260426_v18"></script>
+    <script type="module" src="app-v19.js?v=20260426_v19"></script>
 </body>
 </html>
