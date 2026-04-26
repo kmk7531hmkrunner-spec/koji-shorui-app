@@ -15,6 +15,7 @@ import { getPdfConfig } from './src/config-manager.js';
 console.log("Main script loading (Intelligent Workflow Build)...");
 
 // --- Global State & Setup ---
+let els = {}; 
 let currentTab = 'draft'; // 'draft' or 'sent'
 let searchQuery = '';
 let isSelectionMode = false;
