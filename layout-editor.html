@@ -166,7 +166,7 @@
                     <!-- Batch Action for Geppo -->
                     <div id="geppo-batch-actions" class="hidden" style="margin-bottom: 1rem; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
                         <label style="font-size: 0.8rem; color: #0369a1; font-weight: bold; display: block; margin-bottom: 5px;">🌙 月報: 行レイアウト一括適用</label>
-                        <p style="font-size: 0.7rem; color: #0c4a6e; margin-bottom: 8px;">現在の行の設定（X, 幅, フォント）を他の全29行にコピーします。</p>
+                        <p style="font-size: 0.7rem; color: #0c4a6e; margin-bottom: 8px;">現在の行の設定（X, 幅, フォント）を他の全30行にコピーします。</p>
                         <div style="display:flex; gap:5px;">
                             <button class="btn btn-sm btn-outline" id="btn-geppo-batch-copy" style="flex:1; font-size: 0.7rem;">全行に複製</button>
                         </div>
@@ -300,6 +300,6 @@
 
         window.addEventListener('load', safeInit);
     </script>
-    <script type="module" src="editor.js"></script>
+    <script type="module" src="editor.js?v=${new Date().getTime()}"></script>
 </body>
 </html>
