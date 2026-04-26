@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v20)...");
+console.log("Main script loading (Intelligent Workflow Build v23)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -854,7 +854,14 @@ async function handleBulkPdf() {
         const y = now.getFullYear();
         const m = String(now.getMonth() + 1).padStart(2, '0');
         const d = String(now.getDate()).padStart(2, '0');
-        doc.save(`bulk_${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`);
+        
+        let filename = '';
+        if (typeSelect.value === '月報') {
+            filename = `${y}_${m}_${name}.pdf`;
+        } else {
+            filename = `${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`;
+        }
+        doc.save(filename);
         
         // Move to 'sent'
         for (const p of projects) {
@@ -947,7 +954,12 @@ async function generatePdf(id, userName, docTypeName) {
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
-    const filename = `${y}_${m}_${d}_${userName}_${docTypeName}.pdf`;
+    let filename = '';
+    if (p.type === 'geppo') {
+        filename = `${y}_${m}_${userName}.pdf`;
+    } else {
+        filename = `${y}_${m}_${d}_${userName}_${docTypeName}.pdf`;
+    }
     
     doc.save(filename);
     
