@@ -762,7 +762,9 @@ async function handleShowPreview() {
     els['btn-preview-pdf-out'].onclick = async () => { 
         if (confirm('このプレビュー内容でPDFを作成しますか？')) {
             overlay.classList.add('hidden'); 
-            await generatePdf(currentProject.id); 
+            const savedName = localStorage.getItem('last_user_name') || 'ユーザー';
+            const typeNames = { 'kanryo': '完了報告書', 'marusan': '丸産報告書', 'geppo': '月報' };
+            await generatePdf(currentProject.id, savedName, typeNames[currentProject.type] || '書類'); 
         }
     };
     els['btn-close-preview'].onclick = () => overlay.classList.add('hidden');
@@ -920,6 +922,7 @@ async function handleBulkPdf() {
 
         exitSelectionMode();
         renderList();
+        console.log("Triggering healing dialog after Bulk PDF...");
         showHealingDialog("一括出力が完了しました。選択したすべての書類のステータスを「完了」に更新しました。");
     };
 }
@@ -1014,21 +1017,20 @@ async function generatePdf(id, userName, docTypeName) {
     if (p.status === 'draft') {
         p.status = 'sent';
         await saveProject(p);
-        
-        // Force refresh the entire list and switch tab if necessary, 
-        // but at minimum refresh current view
         await renderList(); 
-        
-        showHealingDialog();
     }
+
+    console.log("Triggering healing dialog after Single PDF...");
+    showHealingDialog();
 }
 
 function showHealingDialog(customMsg = null) {
-    if (!els['healing-modal']) return;
+    const modal = document.getElementById('healing-modal');
+    if (!modal) return;
     
     // 1. Randomize Style
     const style = STATIONERY_STYLES[Math.floor(Math.random() * STATIONERY_STYLES.length)];
-    const paper = document.querySelector('.healing-letter-paper');
+    const paper = modal.querySelector('.healing-letter-paper');
     if (paper) {
         paper.style.backgroundColor = style.bg;
         paper.style.backgroundImage = `radial-gradient(${style.accent} 0.5px, transparent 0.5px)`;
@@ -1036,23 +1038,26 @@ function showHealingDialog(customMsg = null) {
     
     // 2. Randomize Photo
     const photoIdx = Math.floor(Math.random() * 4) + 1;
-    if (els['healing-img']) els['healing-img'].src = `healing_${photoIdx}.png`;
+    const img = document.getElementById('healing-img');
+    if (img) img.src = `healing_${photoIdx}.png`;
     
-    const photoFrame = document.querySelector('.photo-frame');
+    const photoFrame = modal.querySelector('.photo-frame');
     if (photoFrame) {
         const rotate = (Math.random() * 6 - 3).toFixed(1); // -3 to 3 deg
         photoFrame.style.transform = `rotate(${rotate}deg)`;
     }
 
     // 3. Randomize Message
+    const textEl = document.getElementById('healing-text');
     const msg = customMsg || HEALING_MESSAGES[Math.floor(Math.random() * HEALING_MESSAGES.length)];
-    if (els['healing-text']) els['healing-text'].innerHTML = msg.replace(/\n/g, '<br>');
+    if (textEl) textEl.innerHTML = msg.replace(/\n/g, '<br>');
     
-    els['healing-modal'].classList.add('show');
+    modal.classList.add('show');
     
-    if (els['btn-close-healing']) {
-        els['btn-close-healing'].onclick = () => {
-            els['healing-modal'].classList.remove('show');
+    const closeBtn = document.getElementById('btn-close-healing');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            modal.classList.remove('show');
         };
     }
 }
