@@ -393,7 +393,7 @@ window.confirmGeneratePdf = (id) => {
         if (!name) { alert('氏名を入力してください'); return; }
         
         localStorage.setItem('last_user_name', name);
-        modal.classList.add('hidden');
+        modal.classList.remove('hidden');
         
         generatePdf(id, name, typeSelect.value);
     };
@@ -416,8 +416,10 @@ window.confirmDeleteProject = (id) => {
 function showForm(type, project = null) {
     if (els['type-modal']) els['type-modal'].style.display = 'none';
     
-    // Hide ALL views to ensure form-view is an independent screen
+    // Hide ALL views and global UI to create an 'Independent Page' feel
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    if (els['app-header']) els['app-header'].classList.add('hidden');
+    if (els['fab-plus']) els['fab-plus'].classList.add('hidden');
     
     currentProject = project || {
         id: `project_${Date.now()}`,
@@ -430,24 +432,51 @@ function showForm(type, project = null) {
     };
     
     els['form-view'].classList.remove('hidden');
-    if (els['form-page-title']) els['form-page-title'].textContent = project ? '再編集' : '新規作成';
+    if (els['form-page-title']) {
+        const typeName = type === 'kanryo' ? '完了報告書' : (type === 'marusan' ? '丸産報告書' : '月報');
+        els['form-page-title'].textContent = `${typeName} - ${project ? '編集' : '作成'}`;
+    }
     
-    // Ensure we start at the top of the new screen
     window.scrollTo(0, 0);
     renderForm();
 }
 
+window.closeForm = () => {
+    if (confirm('作業中の内容は破棄されますが、戻りますか？')) {
+        if (els['form-view']) els['form-view'].classList.add('hidden');
+        if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
+        if (els['app-header']) els['app-header'].classList.remove('hidden');
+        // Restore FAB based on tab
+        if (els['fab-plus']) {
+            els['fab-plus'].style.display = (currentTab === 'list') ? 'flex' : 'none';
+            els['fab-plus'].classList.remove('hidden');
+        }
+        renderList();
+    }
+};
+
 function renderForm() {
     const container = els['editor-container'];
     if (!container) return;
+    
+    // Unified header for ALL independent form pages
+    const typeName = currentProject.type === 'kanryo' ? '完了報告書' : (currentProject.type === 'marusan' ? '丸産報告書' : '月報');
+    
     container.innerHTML = `
-        <div class="form-container">
-            <div id="dynamic-form-fields">
-                ${currentProject.type === 'kanryo' ? renderKanryoFields() : (currentProject.type === 'marusan' ? renderMarusanFields() : renderGeppoFields())}
+        <div class="independent-form-page">
+            <div class="independent-form-header">
+                <button class="btn-back-to-list" onclick="window.closeForm()">✕ 戻る</button>
+                <div class="form-title-center">${typeName} ${currentProject.status === 'sent' ? '再編集' : '作成'}</div>
             </div>
-            <div class="form-actions-bottom" style="margin-top: 2rem; margin-bottom: 4rem; display: flex; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 2rem;">
-                <button class="btn btn-outline" id="btn-preview-doc" style="flex:1; height: 50px;">プレビュー</button>
-                <button class="btn btn-primary" id="btn-save-draft" style="flex:1; height: 50px;">下書き保存</button>
+            
+            <div class="form-scroll-content">
+                <div id="dynamic-form-fields">
+                    ${currentProject.type === 'kanryo' ? renderKanryoFields() : (currentProject.type === 'marusan' ? renderMarusanFields() : renderGeppoFields())}
+                </div>
+                <div class="form-actions-bottom" style="margin-top: 3rem; margin-bottom: 5rem; display: flex; gap: 10px; border-top: 2px solid #e2e8f0; padding-top: 2rem;">
+                    <button class="btn btn-outline" id="btn-preview-doc" style="flex:1; height: 55px; font-weight:bold;">プレビュー</button>
+                    <button class="btn btn-primary" id="btn-save-draft" style="flex:1; height: 55px; font-weight:bold;">下書き保存</button>
+                </div>
             </div>
         </div>
     `;
@@ -570,45 +599,72 @@ function renderMarusanFields() {
 
 function renderGeppoFields() {
     const fd = currentProject.formData || {};
-    let rowsHtml = '';
-    for (let i = 0; i < 31; i++) {
-        rowsHtml += `
-            <div class="geppo-row" style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#fff' : '#f8fafc'}; position: relative;">
-                <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-                    <span style="font-weight:bold; color:var(--accent-gold); width:25px;">${i+1}</span>
-                    <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="日" style="width:40px;">
-                    <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}" placeholder="会社名" style="flex:2;">
-                    <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}" placeholder="監督" style="flex:1;">
-                    ${i < 30 ? `<button type="button" class="btn btn-sm btn-outline" style="padding: 2px 5px; font-size: 10px;" onclick="window.copyRowToNext(${i})">↓次へ</button>` : ''}
+    let html = `
+        <div class="geppo-top-meta" style="margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0;">
+            <div class="form-group">
+                <label class="label">① 氏名</label>
+                <input type="text" id="field-workerName" value="${fd.workerName || ''}" placeholder="例：山田 太郎">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                    <label class="label">② 年</label>
+                    <input type="number" id="field-geppo_year" value="${fd.geppo_year || new Date().getFullYear()}">
                 </div>
-                <div style="display:flex; gap:5px;">
-                    <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}" placeholder="現場名" style="flex:1;">
-                    <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}" placeholder="住所" style="flex:1.5;">
+                <div class="form-group" style="flex:1;">
+                    <label class="label">③ 月</label>
+                    <input type="number" id="field-geppo_month" value="${fd.geppo_month || (new Date().getMonth() + 1)}">
+                </div>
+            </div>
+        </div>
+
+        <div class="geppo-rows-list">
+            <div style="padding: 15px; background: #fff7ed; border: 2px solid #fb923c; border-radius: 12px; margin-bottom: 25px; font-size: 0.9rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                <div style="color: #9a3412; font-weight: bold; margin-bottom:8px;">💡 全行コピー機能</div>
+                <div style="color: #c2410c; margin-bottom:12px; font-size:0.8rem;">1行目を入力後にボタンを押すと、全ての行に内容を反映できます。</div>
+                <button type="button" class="btn btn-primary" onclick="window.copyFirstGeppoRow()" style="width:100%; background:#ea580c; border:none; height:45px; font-weight:bold;">1行目の内容を全行にコピー</button>
+            </div>
+    `;
+
+    for (let i = 0; i < 31; i++) {
+        html += `
+            <div class="geppo-row-card" style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:15px; margin-bottom:15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; margin-bottom:10px; padding-bottom:5px;">
+                    <span style="font-weight:bold; color:#2563eb;">${i + 1}行目</span>
+                    ${i < 30 ? `<button type="button" class="btn-copy-next" onclick="window.copyRowToNext(${i})" style="font-size:0.7rem; color:#2563eb; background:none; border:none; text-decoration:underline;">↓次へコピー</button>` : ''}
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="width:50px;">
+                        <label style="font-size:0.7rem; color:#64748b;">日</label>
+                        <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="${i + 1}">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.7rem; color:#64748b;">会社名</label>
+                        <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.7rem; color:#64748b;">現場名</label>
+                        <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.7rem; color:#64748b;">監督名</label>
+                        <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size:0.7rem; color:#64748b;">住所</label>
+                    <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}">
                 </div>
             </div>
         `;
     }
 
-    return `
-        <div class="form-section">
-            <h3 class="section-title">月報 基本情報</h3>
-            <div class="flex-row" style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1;"><label class="label">年</label><input type="number" id="field-geppo_year" value="${fd.geppo_year || new Date().getFullYear()}"></div>
-                <div class="form-group" style="flex:1;"><label class="label">月</label><input type="number" id="field-geppo_month" value="${fd.geppo_month || (new Date().getMonth() + 1)}"></div>
-            </div>
-            <div class="form-group"><label class="label">作業者</label><input type="text" id="form-worker" value="${currentProject.workerName || ''}" placeholder="作業者名を入力"></div>
-        </div>
-        <div class="form-section" style="padding:0; overflow:hidden;">
-            <h3 class="section-title" style="margin: 15px;">勤務・現場記録 (30日分)</h3>
-        <div id="geppo-table-container">
-            <div style="padding: 10px; background: #e0f2fe; border-radius: 8px; margin: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.85rem; font-weight: bold; color: #0369a1;">💡 1行目の内容（現場名・監督名等）を全行にコピーできます</span>
-                <button type="button" class="btn btn-sm btn-primary" onclick="window.copyFirstGeppoRow()">全行にコピー</button>
-            </div>
-            ${rowsHtml}
-        </div>
-        </div>
-    `;
+    html += `</div>`;
+    return html;
 }
 
 // --- Handlers & Sync ---
