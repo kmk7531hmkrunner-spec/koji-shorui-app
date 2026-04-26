@@ -533,22 +533,22 @@ function renderMarusanFields() {
 function renderGeppoFields() {
     const fd = currentProject.formData || {};
     let rowsHtml = '';
-    for (let i = 0; i < 30; i++) {
-        rowsHtml += `
-            <div class="geppo-row" style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
-                <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-                    <span style="font-weight:bold; color:var(--accent-gold); width:30px;">${i+1}</span>
-                    <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="日" style="width:50px;">
-                    <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}" placeholder="会社名" style="flex:2;">
-                    <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}" placeholder="監督名" style="flex:1;">
-                </div>
-                <div style="display:flex; gap:5px;">
-                    <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}" placeholder="現場名" style="flex:1;">
-                    <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}" placeholder="住所" style="flex:1.5;">
-                </div>
+    for (let i = 0; i < 31; i++) {
+    rowsHtml += `
+        <div class="geppo-row" style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+            <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                <span style="font-weight:bold; color:var(--accent-gold); width:30px;">${i+1}</span>
+                <input type="number" id="field-row_${i}_day" value="${fd[`row_${i}_day`] || ''}" placeholder="日" style="width:50px;">
+                <input type="text" id="field-row_${i}_company" value="${fd[`row_${i}_company`] || ''}" placeholder="会社名" style="flex:2;">
+                <input type="text" id="field-row_${i}_supervisor" value="${fd[`row_${i}_supervisor`] || ''}" placeholder="監督名" style="flex:1;">
             </div>
-        `;
-    }
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="field-row_${i}_site" value="${fd[`row_${i}_site`] || ''}" placeholder="現場名" style="flex:1;">
+                <input type="text" id="field-row_${i}_address" value="${fd[`row_${i}_address`] || ''}" placeholder="住所" style="flex:1.5;">
+            </div>
+        </div>
+    `;
+}
 
     return `
         <div class="form-section">
@@ -561,9 +561,13 @@ function renderGeppoFields() {
         </div>
         <div class="form-section" style="padding:0; overflow:hidden;">
             <h3 class="section-title" style="margin: 15px;">勤務・現場記録 (30日分)</h3>
-            <div id="geppo-table-container">
-                ${rowsHtml}
+        <div id="geppo-table-container">
+            <div style="padding: 10px; background: #e0f2fe; border-radius: 8px; margin: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.85rem; font-weight: bold; color: #0369a1;">💡 1行目の内容（現場名・監督名等）を全行にコピーできます</span>
+                <button type="button" class="btn btn-sm btn-primary" onclick="window.copyFirstGeppoRow()">全行にコピー</button>
             </div>
+            ${rowsHtml}
+        </div>
         </div>
     `;
 }
@@ -899,7 +903,40 @@ function addMessage(type, text) {
     if (els['bot-messages']) { els['bot-messages'].appendChild(div); els['bot-messages'].scrollTop = els['bot-messages'].scrollHeight; }
 }
 
-window.handleReEditReceipt = () => { const b = document.getElementById('btn-scan-receipt'); if(b) b.click(); };
-window.generatePdf = generatePdf;
-window.handleDeleteProject = handleDeleteProject;
-window.editExistingProject = (id) => showForm('', null); // Placeholder
+function handleReEditReceipt() {
+    const btn = document.getElementById('btn-scan-receipt');
+    if (btn) btn.click();
+}
+
+window.copyFirstGeppoRow = () => {
+    const company = document.getElementById('field-row_0_company')?.value || '';
+    const supervisor = document.getElementById('field-row_0_supervisor')?.value || '';
+    const site = document.getElementById('field-row_0_site')?.value || '';
+    const address = document.getElementById('field-row_0_address')?.value || '';
+    
+    if (!company && !supervisor && !site && !address) {
+        alert('1行目にコピーしたい内容を入力してください');
+        return;
+    }
+
+    if (!confirm('1行目の内容をすべての行に反映しますか？')) return;
+
+    for (let i = 1; i < 31; i++) {
+        const c = document.getElementById(`field-row_${i}_company`);
+        const s = document.getElementById(`field-row_${i}_supervisor`);
+        const st = document.getElementById(`field-row_${i}_site`);
+        const ad = document.getElementById(`field-row_${i}_address`);
+        
+        if (c) c.value = company;
+        if (s) s.value = supervisor;
+        if (st) st.value = site;
+        if (ad) ad.value = address;
+    }
+};
+
+window.handleCardPreview = (id) => handleCardPreview(id);
+window.confirmGeneratePdf = (id) => confirmGeneratePdf(id);
+window.editProject = (id) => editProject(id);
+window.confirmDeleteProject = (id) => confirmDeleteProject(id);
+window.generatePdf = (id, userName, docTypeName) => generatePdf(id, userName, docTypeName);
+window.handleReEditReceipt = () => handleReEditReceipt();
