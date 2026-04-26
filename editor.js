@@ -196,11 +196,10 @@ function bindEvents() {
         const parts = selectedFieldId.split('_');
         const colName = parts[2];
 
-        // Measure Y interval between row 0 and row 1
-        const r0 = fields.find(f => f.id === `row_0_${colName}`);
-        const r1 = fields.find(f => f.id === `row_1_${colName}`);
-        let interval = 2.5; // default
-        if (r0 && r1) interval = r1.y - r0.y;
+        // Get interval from input
+        const intervalInput = document.getElementById('geppo-row-interval');
+        let interval = 2.5; 
+        if (intervalInput) interval = parseFloat(intervalInput.value) || 2.5;
 
         if (confirm(`全ての「${sourceField.label.split(')')[1] || sourceField.label}」項目にこのレイアウトを適用し、縦に整列させますか？\n(間隔: ${interval.toFixed(1)}%)`)) {
             fields.forEach(f => {

@@ -5,16 +5,19 @@ import { get, set } from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
  */
 const geppoFields = [
   { id: "geppo_year", label: "年", x: 10, y: 5, fontSize: 12, width: 10 },
-  { id: "geppo_month", label: "月", x: 25, y: 5, fontSize: 12, width: 10 }
+  { id: "geppo_month", label: "月", x: 25, y: 5, fontSize: 12, width: 10 },
+  { id: "workerName", label: "氏名", x: 40, y: 5, fontSize: 12, width: 20 }
 ];
 
-// Generate ONLY THE FIRST row for Geppo as requested
-const yBase = 15;
-geppoFields.push({ id: `row_0_day`, label: `1日`, x: 5, y: yBase, fontSize: 9, width: 5 });
-geppoFields.push({ id: `row_0_company`, label: `(行1)会社名`, x: 12, y: yBase, fontSize: 9, width: 15 });
-geppoFields.push({ id: `row_0_site`, label: `(行1)現場名`, x: 30, y: yBase, fontSize: 9, width: 25 });
-geppoFields.push({ id: `row_0_supervisor`, label: `(行1)監督名`, x: 60, y: yBase, fontSize: 9, width: 10 });
-geppoFields.push({ id: `row_0_address`, label: `(行1)住所`, x: 75, y: yBase, fontSize: 9, width: 20 });
+// Generate 31 rows for Geppo (Restored for adjustable duplication)
+for (let i = 0; i < 31; i++) {
+  const yBase = 15 + (i * 2.5); 
+  geppoFields.push({ id: `row_${i}_day`, label: `${i+1}日`, x: 5, y: yBase, fontSize: 9, width: 5 });
+  geppoFields.push({ id: `row_${i}_company`, label: `(行${i+1})会社名`, x: 12, y: yBase, fontSize: 9, width: 15 });
+  geppoFields.push({ id: `row_${i}_site`, label: `(行${i+1})現場名`, x: 30, y: yBase, fontSize: 9, width: 25 });
+  geppoFields.push({ id: `row_${i}_supervisor`, label: `(行${i+1})監督名`, x: 60, y: yBase, fontSize: 9, width: 10 });
+  geppoFields.push({ id: `row_${i}_address`, label: `(行${i+1})住所`, x: 75, y: yBase, fontSize: 9, width: 20 });
+}
 
 const DEFAULT_CONFIG = {
   "kanryo": {
