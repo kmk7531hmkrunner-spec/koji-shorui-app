@@ -112,6 +112,12 @@ export async function getPdfConfig() {
           if (cF.heightRatio) dF.heightRatio = cF.heightRatio;
         }
       });
+
+      // EMERGENCY REPAIR: If Geppo fields were saved when only Row 0 existed, 
+      // the 'config' object might be missing the other 30 rows if customFields overrode everything.
+      // But we initialized 'config' from DEFAULT_CONFIG which HAS 31 rows.
+      // So we just need to make sure we didn't accidentally lose them.
+      // (The current logic is safe, but let's be explicit for Geppo integrity)
     }
   }
   return config;

@@ -60,7 +60,8 @@ function setupElements() {
         'editor-container', 'scanner-overlay', 'scanner-image',
         'btn-scanner-cancel', 'btn-scanner-done', 'btn-scanner-rotate', 'btn-scanner-filter',
         'document-preview-overlay', 'preview-canvas-container', 'btn-close-preview', 'btn-preview-pdf-out',
-        'form-page-title', 'bot-container', 'fab-bot', 'btn-close-bot', 'btn-send-bot', 'bot-input', 'bot-messages'
+        'form-page-title', 'bot-container', 'fab-bot', 'btn-close-bot', 'btn-send-bot', 'bot-input', 'bot-messages',
+        'calendar-view', 'calendar-header', 'calendar-grid', 'calendar-day-list'
     ];
     ids.forEach(id => {
         const el = document.getElementById(id);
