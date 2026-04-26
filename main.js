@@ -438,9 +438,11 @@ function renderForm() {
             <div id="dynamic-form-fields">
                 ${currentProject.type === 'kanryo' ? renderKanryoFields() : (currentProject.type === 'marusan' ? renderMarusanFields() : renderGeppoFields())}
             </div>
-            <div class="form-actions-bottom">
-                <button class="btn btn-outline" id="btn-preview-doc">プレビュー</button>
-                <button class="btn btn-primary" id="btn-save-draft">下書き保存</button>
+            <div class="form-actions-bottom" style="margin-bottom: 2rem; display: flex; gap: 10px;">
+                ${currentProject.status === 'draft' ? `<button class="btn btn-outline" id="btn-preview-doc" style="flex:1;">プレビュー</button>` : ''}
+                <button class="btn btn-primary" id="btn-save-draft" style="flex:1;">
+                    ${currentProject.status === 'sent' ? '💾 下書きに戻して保存' : '下書き保存'}
+                </button>
             </div>
         </div>
     `;
