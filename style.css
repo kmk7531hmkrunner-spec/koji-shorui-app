@@ -2,6 +2,7 @@
   --bg-dark: #f8fafc;
   --bg-card: #ffffff;
   --accent-gold: #0ea5e9; /* Soft Blue */
+  --primary: #0ea5e9;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --status-draft: #f97316; /* Soft Orange */
@@ -727,7 +728,7 @@ input:focus, select:focus, textarea:focus {
     right: 25px;
     width: 65px;
     height: 65px;
-    background: #2563eb;
+    background: #0ea5e9;
     color: white;
     border-radius: 50%;
     display: flex;
@@ -935,7 +936,7 @@ input:focus, select:focus, textarea:focus {
     bottom: 4px;
 }
 
-.btn-new-geppo { background: #2563eb !important; color: white !important; }
+.btn-new-geppo { background: #0ea5e9 !important; color: white !important; }
 
 .calendar-day.selected { background: #0ea5e9; color: white; }
 
