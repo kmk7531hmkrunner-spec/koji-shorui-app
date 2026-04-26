@@ -252,6 +252,32 @@ function bindEvents() {
         }
     });
 
+    addSafeListener(document.getElementById('geppo-row-interval'), 'input', (e) => {
+        const interval = parseFloat(e.target.value) || 0;
+        const type = editorTypeSelect.value;
+        if (type !== 'geppo') return;
+        
+        const fields = currentLayoutConfig[type].fields;
+        const columns = ['day', 'company', 'site', 'supervisor', 'address'];
+        
+        columns.forEach(colName => {
+            const row0Field = fields.find(rf => rf.id === `row_0_${colName}`);
+            if (!row0Field) return;
+
+            fields.forEach(f => {
+                if (f.id.endsWith(`_${colName}`)) {
+                    const rowIndex = parseInt(f.id.split('_')[1]);
+                    f.y = row0Field.y + (rowIndex * interval);
+                    
+                    // Update label position on canvas immediately
+                    const label = editorCanvasArea.querySelector(`.draggable-label[data-id="${f.id}"]`);
+                    if (label) label.style.top = f.y + '%';
+                }
+            });
+        });
+        if (isRealPreviewMode) updateRealPreview();
+    });
+
     document.addEventListener('keydown', handleKeyboardMove);
 }
 

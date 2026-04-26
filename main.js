@@ -111,8 +111,6 @@ async function init() {
 // --- List View Logic ---
 
 async function renderList() {
-    if (!els['project-list']) return;
-    
     let projects = await getAllProjects();
     
     // Normalization helper (Full-width -> Half-width, Lowercase)
@@ -123,22 +121,36 @@ async function renderList() {
         const q = normalize(searchQuery);
         projects = projects.filter(p => {
             const fd = p.formData || {};
-            // Concatenate all searchable text and normalize it
             const content = `${p.type} ${p.workerName} ${p.date} ${fd.companyName} ${fd.supervisorName} ${fd.siteName} ${fd.address} ${fd.content} ${fd.dailyReport}`;
             return normalize(content).includes(q);
         });
     }
 
+    // NEW APPROACH: Hide all views first
+    Object.values(els).forEach(el => {
+        if (el && el.classList && el.classList.contains('view')) {
+            el.classList.add('hidden');
+        }
+    });
+
     if (currentTab === 'sent') {
+        if (els['calendar-view']) els['calendar-view'].classList.remove('hidden');
         renderCalendar(projects);
+    } else {
+        if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
+        renderListContent(projects);
+    }
+}
+
+async function renderListContent(projects) {
+    if (!els['project-list']) return;
+    const filtered = projects.filter(p => p.status === currentTab);
+    if (filtered.length === 0) {
+        els['project-list'].innerHTML = `<div class="empty-state"><p>${currentTab === 'draft' ? '下書きはありません' : '書類はありません'}</p></div>`;
+        updateSelectionUI();
         return;
     }
-    
-    // Switch UI
-    if (els['project-list']) els['project-list'].classList.remove('hidden');
-    if (els['calendar-view']) els['calendar-view'].classList.add('hidden');
-
-    const filtered = projects.filter(p => p.status === currentTab);
+    // ... rest of list rendering logic ...
 
     if (filtered.length === 0) {
         els['project-list'].innerHTML = `<div class="empty-state"><p>${currentTab === 'draft' ? '下書きはありません' : '書類はありません'}</p></div>`;
