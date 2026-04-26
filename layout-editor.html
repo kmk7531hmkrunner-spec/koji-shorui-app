@@ -162,21 +162,6 @@
                     <div class="setting-item">
                         <label>項目名: <span id="selected-field-name">-</span></label>
                     </div>
-                    
-                    <!-- Batch Action for Geppo -->
-                    <div id="geppo-batch-actions" class="hidden" style="margin-bottom: 1rem; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
-                        <label style="font-size: 0.8rem; color: #0369a1; font-weight: bold; display: block; margin-bottom: 5px;">🌙 月報: 行レイアウト一括適用</label>
-                        <p style="font-size: 0.7rem; color: #0c4a6e; margin-bottom: 8px;">現在の行の設定（X, 幅, フォント）を他の全30行にコピーします。</p>
-                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
-                            <span style="font-size:0.7rem;">行間隔 (Y %):</span>
-                            <button class="btn btn-sm btn-outline btn-interval-step" data-dir="down" style="padding:2px 8px; font-weight:bold;">-</button>
-                            <input type="number" id="geppo-row-interval" value="2.5" step="0.1" style="width:50px; font-size:0.8rem; padding:4px; text-align:center; border:1px solid #0ea5e9; border-radius:4px;">
-                            <button class="btn btn-sm btn-outline btn-interval-step" data-dir="up" style="padding:2px 8px; font-weight:bold;">+</button>
-                        </div>
-                        <div style="display:flex; gap:5px; flex-direction: column;">
-                            <button class="btn btn-sm btn-primary" id="btn-geppo-row-copy-all" style="font-size: 0.7rem; background: #0369a1; border-color: #0369a1;">★ 1行目(Row0)の全項目を全31行に同期</button>
-                        </div>
-                    </div>
 
                     <div class="control-group" style="margin-top: 15px;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -238,6 +223,23 @@
                     </div>
                     
                     <p class="helper-text">※ 矢印キー（↑↓←→）でも微調整できます。</p>
+                </div>
+
+                <!-- Batch Action for Geppo (Permanently visible when Monthly Report is selected) -->
+                <div id="geppo-batch-actions" class="hidden" style="margin-top: 1.5rem; padding: 15px; background: #fff7ed; border: 2px solid #fb923c; border-radius: 12px; box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);">
+                    <label style="font-size: 0.9rem; color: #9a3412; font-weight: 800; display: block; margin-bottom: 8px; border-bottom: 1px solid #fdba74; padding-bottom: 4px;">🌙 月報: 行レイアウト一括調整</label>
+                    <p style="font-size: 0.75rem; color: #c2410c; margin-bottom: 12px; line-height: 1.4;">1行目の設定（X, 幅, フォント）を全31行に一括適用します。</p>
+                    
+                    <div style="display:flex; gap:12px; align-items:center; margin-bottom:15px; background:white; padding:8px; border-radius:8px; border:1px solid #fed7aa;">
+                        <span style="font-size:0.75rem; font-weight:bold; color:#7c2d12;">行間隔 (Y%):</span>
+                        <button class="btn btn-sm btn-outline btn-interval-step" data-dir="down" style="width:32px; height:32px; font-weight:bold; border-color:#fdba74;">-</button>
+                        <input type="number" id="geppo-row-interval" value="2.5" step="0.1" style="width:55px; font-size:1rem; font-weight:bold; padding:4px; text-align:center; border:2px solid #fb923c; border-radius:6px; color:#9a3412;">
+                        <button class="btn btn-sm btn-outline btn-interval-step" data-dir="up" style="width:32px; height:32px; font-weight:bold; border-color:#fdba74;">+</button>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="btn-geppo-row-copy-all" style="width:100%; font-size: 0.85rem; font-weight:bold; background: #ea580c; border:none; height:45px; box-shadow: 0 4px 0 #9a3412; transition: all 0.1s;">
+                        ★ 1行目を全31行に同期して適用
+                    </button>
                 </div>
                 
                 <div id="no-selection-msg" style="margin-top: 2rem; text-align: center; color: #94a3b8;">
