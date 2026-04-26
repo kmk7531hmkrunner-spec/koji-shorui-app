@@ -962,7 +962,4 @@ window.copyFirstGeppoRow = () => {
     }
 };
 
-window.handleCardPreview = (id) => handleCardPreview(id);
-window.editProject = (id) => editProject(id);
-window.confirmDeleteProject = (id) => confirmDeleteProject(id);
-window.handleReEditReceipt = () => handleReEditReceipt();
+// Note: Global functions are already bound to window at their definition points (L325, L352, L374, etc.)
