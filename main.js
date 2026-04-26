@@ -867,35 +867,34 @@ function bindBotEvents() {
                 hasMoved = true;
                 e.preventDefault(); // Prevent scroll while dragging
             }
-            
-            if (hasMoved) {
-                fabBot.style.left = `${initialX + dx}px`;
-                fabBot.style.top = `${initialY + dy}px`;
-                fabBot.style.bottom = 'auto';
-                fabBot.style.right = 'auto';
-            }
-        };
 
-        const endDrag = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            fabBot.style.transition = 'all 0.3s ease';
-        };
+        if (hasMoved) {
+            fabBot.style.left = `${initialX + dx}px`;
+            fabBot.style.top = `${initialY + dy}px`;
+            fabBot.style.bottom = 'auto';
+            fabBot.style.right = 'auto';
+        }
+    };
 
-        fabBot.addEventListener('mousedown', startDrag);
-        document.addEventListener('mousemove', moveDrag, {passive: false});
-        document.addEventListener('mouseup', endDrag);
+    const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        fabBot.style.transition = 'all 0.3s ease';
+    };
 
-        fabBot.addEventListener('touchstart', startDrag, {passive: true});
-        document.addEventListener('touchmove', moveDrag, {passive: false});
-        document.addEventListener('touchend', endDrag);
+    fabBot.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', moveDrag, {passive: false});
+    document.addEventListener('mouseup', endDrag);
 
-        fabBot.onclick = (e) => {
-            if (hasMoved) { e.preventDefault(); return; }
-            els['bot-container'].classList.toggle('hidden');
-        };
-    }
-    
+    fabBot.addEventListener('touchstart', startDrag, {passive: true});
+    document.addEventListener('touchmove', moveDrag, {passive: false});
+    document.addEventListener('touchend', endDrag);
+
+    fabBot.onclick = (e) => {
+        if (hasMoved) { e.preventDefault(); return; }
+        if (els['bot-container']) els['bot-container'].classList.toggle('hidden');
+    };
+
     if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
     if (els['btn-send-bot']) els['btn-send-bot'].onclick = () => {
         const msg = els['bot-input'].value.trim(); if (!msg) return;
@@ -903,6 +902,7 @@ function bindBotEvents() {
         setTimeout(() => addMessage('bot', '確認いたします。'), 500);
     };
 }
+
 function addMessage(type, text) {
     const div = document.createElement('div'); div.className = `message ${type}`; div.textContent = text;
     if (els['bot-messages']) { els['bot-messages'].appendChild(div); els['bot-messages'].scrollTop = els['bot-messages'].scrollHeight; }
@@ -933,7 +933,7 @@ window.copyRowToNext = (idx) => {
     if (nextS) nextS.value = supervisor;
     if (nextSt) nextSt.value = site;
     if (nextAd) nextAd.value = address;
-    if (nextD && day) nextD.value = parseInt(day) + 1; // Increment day if possible
+    if (nextD && day) nextD.value = parseInt(day) + 1;
 };
 
 window.copyFirstGeppoRow = () => {
@@ -962,10 +962,7 @@ window.copyFirstGeppoRow = () => {
     }
 };
 
-
 window.handleCardPreview = (id) => handleCardPreview(id);
-window.confirmGeneratePdf = (id) => confirmGeneratePdf(id);
 window.editProject = (id) => editProject(id);
 window.confirmDeleteProject = (id) => confirmDeleteProject(id);
-window.generatePdf = (id, userName, docTypeName) => generatePdf(id, userName, docTypeName);
 window.handleReEditReceipt = () => handleReEditReceipt();
