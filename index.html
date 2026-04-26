@@ -25,16 +25,15 @@
     <div id="app">
         <!-- Search Bar moved -->
 
-        <!-- Project List View -->
-        <div id="project-list-view" class="view-container fade-in">
-            <header class="app-header app-header-logo">
+        <!-- Global Navigation Wrapper -->
+        <div id="global-nav">
+            <header class="app-header app-header-logo" id="main-app-header" onclick="window.switchTab('draft')" style="cursor:pointer;">
                 <div class="app-logo-wrapper">
                     <h1 class="app-logo"><span>PRO</span>.DOC</h1>
                     <span class="logo-subtitle">SMART WORKFLOW</span>
                 </div>
             </header>
 
-            <!-- Search Bar moved below Logo -->
             <div id="search-container" class="search-container">
                 <i class="search-icon">🔍</i>
                 <input type="text" id="search-input" placeholder="書類を検索（会社名、監督名、現場名...）">
@@ -44,7 +43,10 @@
                 <div class="tab active" data-tab="draft">下書き</div>
                 <div class="tab" data-tab="sent">完了</div>
             </nav>
+        </div>
 
+        <!-- Project List View -->
+        <div id="project-list-view" class="view-container fade-in">
             <!-- Permanent Top Bulk Action Area -->
             <div id="top-bulk-container" class="top-bulk-container">
                 <button class="btn btn-primary btn-bulk-top" id="btn-bulk-pdf-exec">

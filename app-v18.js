@@ -78,7 +78,7 @@ function setupElements() {
         'btn-scanner-cancel', 'btn-scanner-done', 'btn-scanner-rotate', 'btn-scanner-filter',
         'document-preview-overlay', 'preview-canvas-container', 'btn-close-preview', 'btn-preview-pdf-out',
         'form-page-title', 'bot-container', 'fab-bot', 'btn-close-bot', 'btn-send-bot', 'bot-input', 'bot-messages',
-        'calendar-view', 'calendar-header', 'calendar-grid', 'calendar-day-list'
+        'calendar-view', 'calendar-header', 'calendar-grid', 'calendar-day-list', 'global-nav'
     ];
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -421,9 +421,9 @@ window.confirmDeleteProject = (id) => {
 function showForm(type, project = null) {
     if (els['type-modal']) els['type-modal'].style.display = 'none';
     
-    // Hide ALL standardized view containers for a clean transition
+    // Hide ALL standardized view containers and global nav for a clean transition
     document.querySelectorAll('.view-container').forEach(v => v.classList.add('hidden'));
-    
+    if (els['global-nav']) els['global-nav'].classList.add('hidden');
     currentProject = project || {
         id: `project_${Date.now()}`,
         status: 'draft',
@@ -448,7 +448,7 @@ window.closeForm = () => {
     if (confirm('作業中の内容は破棄されますが、戻りますか？')) {
         // Force reset UI state
         if (els['form-view']) els['form-view'].classList.add('hidden');
-        if (els['app-header']) els['app-header'].classList.remove('hidden');
+        if (els['global-nav']) els['global-nav'].classList.remove('hidden');
         
         // Always go back to draft tab to ensure visibility of the work
         window.switchTab('draft');
@@ -692,7 +692,7 @@ async function handleSaveDraft() {
         
         // Hide form and switch tab to DRAFT to ensure user sees their saved data
         if(els['form-view']) els['form-view'].classList.add('hidden');
-        if(els['app-header']) els['app-header'].classList.remove('hidden');
+        if(els['global-nav']) els['global-nav'].classList.remove('hidden');
         
         window.switchTab('draft');
     } catch (err) {
