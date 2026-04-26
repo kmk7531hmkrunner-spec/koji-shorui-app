@@ -12,7 +12,7 @@ import { adaptiveThreshold } from './src/image-utils.js';
 import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
 import { getPdfConfig } from './src/config-manager.js';
 
-console.log("Main script loading (Intelligent Workflow Build v17)...");
+console.log("Main script loading (Intelligent Workflow Build v18)...");
 
 // --- Global State & Setup ---
 window.els = {};
@@ -107,9 +107,9 @@ async function init() {
     
     // 2. Load and render list in background
     try {
-        if (window.logBoot) window.logBoot("Attempting to render list...");
-        await renderList();
-        if (window.logBoot) window.logBoot("Initial list render complete");
+        if (window.logBoot) window.logBoot("Attempting to switch to draft tab...");
+        window.switchTab('draft');
+        if (window.logBoot) window.logBoot("Initial tab switch complete");
     } catch (err) {
         if (window.logBoot) window.logBoot("LIST RENDER FAILED: " + err.message);
         console.error("List render failed", err);
@@ -145,6 +145,7 @@ async function renderList() {
     
     const listContainer = els['project-list'];
     if (!listContainer) return;
+    listContainer.classList.remove('hidden'); // Ensure it's never hidden by other logic
 
     let filtered = projects.filter(p => p.status === 'draft');
 
@@ -243,9 +244,6 @@ function exitSelectionMode() { isSelectionMode = false; selectedIds.clear(); ren
 // --- Calendar Logic ---
 
 function renderCalendar(allProjects) {
-    if (els['project-list']) els['project-list'].classList.add('hidden');
-    if (els['calendar-view']) els['calendar-view'].classList.remove('hidden');
-
     const sentProjects = allProjects.filter(p => p.status === 'sent');
     const container = els['calendar-view'];
     const header = document.getElementById('calendar-header');
