@@ -196,7 +196,7 @@ async function renderList() {
             <div class="selection-trigger-container" style="padding: 25px 15px; display: flex; justify-content: center; width: 100%;">
                 <button class="btn btn-primary" onclick="window.enterSelectionMode()" 
                     style="background: #0ea5e9; color: white; padding: 14px 40px; border-radius: 16px; font-weight: bold; font-size: 1.1rem; width: 100%; max-width: 320px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); border: none;">
-                    複数選択モード
+                    複数選択
                 </button>
             </div>
         `;

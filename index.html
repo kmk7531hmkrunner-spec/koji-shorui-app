@@ -63,11 +63,11 @@
         
         .card-selection-indicator {
             position: absolute; top: 12px; left: 12px; width: 24px; height: 24px;
-            border: 2px solid var(--accent-gold); border-radius: 6px;
+            border: 2px solid var(--accent-gold); border-radius: 50%;
             display: none; align-items: center; justify-content: center; z-index: 10;
             background: white; font-weight: bold; color: white; font-size: 14px;
         }
-        .project-card.selected .card-selection-indicator { background: var(--accent-gold); }
+        .project-card.selected .card-selection-indicator { background: var(--accent-gold); color: white !important; }
         .project-card.selected { border: 1px solid var(--accent-gold); background: rgba(253, 224, 71, 0.05); }
     </style>
 </head>
