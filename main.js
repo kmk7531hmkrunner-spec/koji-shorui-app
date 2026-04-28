@@ -65,6 +65,7 @@ window.switchTab = async (tabName) => {
     if (els['fab-plus']) {
         els['fab-plus'].style.display = (currentTab === 'draft') ? 'flex' : 'none';
     }
+    window.updateSelectionUI();
     await renderList();
 };
 let longPressTimeout = null;
@@ -89,6 +90,7 @@ async function bootApp() {
         if (window.logBoot) window.logBoot(`Loaded ${projects.length} projects`);
         
         if (window.logBoot) window.logBoot("Stage 4: Rendering Initial View");
+        window.updateSelectionUI();
         window.switchTab('draft'); // This handles renderList() internally
         
         if (window.logBoot) window.logBoot("✅ App Boot Successful");
@@ -186,9 +188,23 @@ async function renderList() {
         return;
     }
 
-    listContainer.innerHTML = filtered.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
+    let listHtml = filtered.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
+
+    // Append "複数選択" button under the list (Normal Mode)
+    if (!isSelectionMode && filtered.length > 0) {
+        listHtml += `
+            <div class="selection-trigger-container" style="padding: 25px 15px; display: flex; justify-content: center; width: 100%;">
+                <button class="btn btn-primary" onclick="window.enterSelectionMode()" 
+                    style="background: #0ea5e9; color: white; padding: 14px 40px; border-radius: 16px; font-weight: bold; font-size: 1.1rem; width: 100%; max-width: 320px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); border: none;">
+                    複数選択モード
+                </button>
+            </div>
+        `;
+    }
+
+    listContainer.innerHTML = listHtml;
     bindCardEvents(listContainer);
-    updateSelectionUI();
+    window.updateSelectionUI();
 }
 
 function filterBySearch(list, query) {
@@ -250,7 +266,7 @@ function renderProjectCardHtml(p, geppoLabels) {
     return `
         <div class="project-card fade-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
             ${isSelectionMode ? `
-                <div class="card-selection-indicator selection-mode-active ${isSelected ? 'selected' : ''}">
+                <div class="card-selection-indicator selection-mode-active ${isSelected ? 'selected' : ''}" style="display: flex !important; position: absolute; top: 12px; left: 12px; width: 24px; height: 24px; border: 2px solid var(--accent-gold); border-radius: 50%; align-items: center; justify-content: center; z-index: 10; background: white;">
                     ${isSelected ? '✓' : ''}
                 </div>
             ` : ''}
@@ -289,50 +305,95 @@ function bindCardEvents(container) {
     });
 }
 
-window.openReportModal = () => {
-    const modal = document.getElementById('report-modal');
-    if (modal) {
-        modal.classList.add('active');
-        modal.classList.remove('hidden');
+window.updateSelectionUI = () => {
+    const container = document.getElementById('selection-bar-container');
+    if (!container) return;
+    
+    if (!isSelectionMode) {
+        container.innerHTML = ''; // Hide fixed bar in normal mode (button is in list)
+        container.style.pointerEvents = 'none';
+    } else {
+        container.style.pointerEvents = 'auto';
+        container.innerHTML = `
+            <div style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px); padding: 18px; border-radius: 24px; box-shadow: 0 10px 50px rgba(0,0,0,0.25); display: flex; gap: 12px; align-items: center; width: 92%; max-width: 480px; border: 1px solid rgba(0,0,0,0.1); animation: slideUp 0.3s ease-out;">
+                <div style="font-size: 1rem; font-weight: bold; color: var(--accent-gold); min-width: 40px; text-align: center;">
+                    <span id="dock-count" style="font-size: 1.2rem;">${selectedIds.size}</span>件
+                </div>
+                <button class="btn btn-danger" onclick="window.handleBulkDelete()" style="flex: 1; font-weight: bold; padding: 12px 5px; font-size: 0.9rem;">まとめて削除</button>
+                <button class="btn btn-primary" onclick="window.handleBulkPdf()" style="flex: 1.5; font-weight: bold; padding: 12px 5px; font-size: 0.9rem; background: #0ea5e9; border:none;">まとめてPDF</button>
+                <button class="btn btn-outline" onclick="window.exitSelectionMode()" style="padding: 12px 18px; border-radius: 12px;">✕</button>
+            </div>
+        `;
     }
+};
+
+window.toggleSelection = (id) => { 
+    if (selectedIds.has(id)) selectedIds.delete(id); 
+    else selectedIds.add(id); 
+    window.updateSelectionUI();
+    renderList(); 
 };
 
 window.enterSelectionMode = async (firstId) => {
     isSelectionMode = true;
     window.isSelectionMode = true; 
-    
     if (firstId) selectedIds.add(firstId);
-    
-    const dockNormal = document.getElementById('dock-normal');
-    const dockSelection = document.getElementById('dock-selection');
-    if (dockNormal) dockNormal.style.display = 'none';
-    if (dockSelection) dockSelection.style.display = 'flex';
-    
-    window.updateBulkBar();
+    window.updateSelectionUI();
     await renderList();
 };
-
-function toggleSelection(id) { 
-    console.log("Toggling Selection for:", id);
-    if (selectedIds.has(id)) selectedIds.delete(id); 
-    else selectedIds.add(id); 
-    window.updateBulkBar();
-    if (selectedIds.size === 0) window.exitSelectionMode(); 
-    else renderList(); 
-}
 
 window.exitSelectionMode = async () => {
     isSelectionMode = false;
     window.isSelectionMode = false;
     selectedIds.clear();
-    
-    const dockNormal = document.getElementById('dock-normal');
-    const dockSelection = document.getElementById('dock-selection');
-    if (dockNormal) dockNormal.style.display = 'flex';
-    if (dockSelection) dockSelection.style.display = 'none';
-    
+    window.updateSelectionUI();
     await renderList();
 };
+
+async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`${selectedIds.size}件の書類をすべて削除しますか？\nこの操作は取り消せません。`)) return;
+    await Promise.all(Array.from(selectedIds).map(id => deleteProject(id)));
+    await exitSelectionMode();
+    alert('削除が完了しました');
+}
+window.handleBulkDelete = handleBulkDelete;
+
+async function handleBulkPdf() {
+    if (selectedIds.size === 0) return;
+    const modal = document.getElementById('pdf-filename-modal');
+    const nameInput = document.getElementById('pdf-user-name');
+    const typeSelect = document.getElementById('pdf-doc-type');
+    nameInput.value = localStorage.getItem('last_user_name') || '';
+    modal.classList.remove('hidden');
+    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-pdf-exec').onclick = async () => {
+        const name = nameInput.value.trim();
+        if (!name) { alert('氏名を入力してください'); return; }
+        localStorage.setItem('last_user_name', name);
+        modal.classList.add('hidden');
+        const ids = Array.from(selectedIds);
+        const selectedProjects = [];
+        for (const id of ids) {
+            const p = await getProject(id);
+            if (p) selectedProjects.push(p);
+        }
+        const config = await getPdfConfig();
+        const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
+        const doc = await generateBulkPdf(selectedProjects, templates, config);
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        let filename = typeSelect.value === '月報' ? `${y}_${m}_${name}月報.pdf` : `${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`;
+        doc.save(filename);
+        for (const p of selectedProjects) { if (p.status === 'draft') { p.status = 'sent'; await saveProject(p); } }
+        exitSelectionMode();
+        renderList();
+        if (window.showHealingDialog) window.showHealingDialog("一括出力が完了しました。ステータスを「完了」に更新しました。");
+    };
+}
+window.handleBulkPdf = handleBulkPdf;
 
 // --- Calendar Logic ---
 
