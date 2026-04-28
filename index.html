@@ -307,15 +307,11 @@
         </div>
     </div>
 
-    <!-- Bulk Action Bar -->
-    <div id="bulk-action-bar" class="bulk-action-bar hidden">
-        <div class="bulk-info"><span id="selected-count">0</span>件選択中</div>
-        <button class="btn btn-danger" onclick="window.confirmDeleteSelected()">選択した項目を削除する</button>
-        <button class="btn btn-outline" onclick="window.exitSelectionMode()">キャンセル</button>
-    </div>
+    <!-- Bulk Action Bar Container (Managed by main-v2.js) -->
+    <div id="selection-bar-container"></div>
 
-    <div id="app-version-tag" style="position:fixed; bottom:2px; left:5px; font-size:9px; color:rgba(0,0,0,0.3); z-index:99999; pointer-events:none; background:rgba(255,255,255,0.5); padding:2px 5px; border-radius:4px;">v20260428_REVOLUTION_v4.0.0</div>
-    <script type="module" src="./main.js"></script>
+    <div id="app-version-tag" style="position:fixed; bottom:2px; left:5px; font-size:9px; color:rgba(0,0,0,0.3); z-index:99999; pointer-events:none; background:rgba(255,255,255,0.5); padding:2px 5px; border-radius:4px;">v20260428_ULTRA_v5.0.0</div>
+    <script type="module" src="./main-v2.js?t=1714316000"></script>
     <script>
         // Emergency Override for Bot Greeting
         window.addEventListener('DOMContentLoaded', () => {
