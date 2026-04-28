@@ -1377,4 +1377,14 @@ window.copyFirstGeppoRow = () => {
     }
 };
 
+// Final Global Exposure for robust event handling
+window.generatePdf = generatePdf;
+window.showHealingDialog = showHealingDialog;
+window.handleDeleteProject = handleDeleteProject;
+window.renderList = renderList;
+window.handleSaveDraft = handleSaveDraft;
+window.handleShowPreview = handleShowPreview;
+window.setupElements = setupElements;
+window.bootApp = bootApp;
+
 // End of app-v35.js
