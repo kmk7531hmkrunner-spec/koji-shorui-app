@@ -370,18 +370,35 @@ async function handleBulkPdf() {
             if (p) selectedProjects.push(p);
         }
         const config = await getPdfConfig();
-        const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
-        const doc = await generateBulkPdf(selectedProjects, templates, config);
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        let filename = typeSelect.value === '月報' ? `${y}_${m}_${name}月報.pdf` : `${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`;
-        doc.save(filename);
-        for (const p of selectedProjects) { if (p.status === 'draft') { p.status = 'sent'; await saveProject(p); } }
-        exitSelectionMode();
-        renderList();
-        if (window.showHealingDialog) window.showHealingDialog("一括出力が完了しました。ステータスを「完了」に更新しました。");
+        const templates = { 'kanryo': './images/kanrryoutemp.jpg', 'marusan': './images/marusan_report.jpg', 'geppo': './images/geppo.jpg' };
+        
+        // Show Loading UI
+        const loadingDiv = document.createElement('div');
+        loadingDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999999;font-weight:bold;';
+        loadingDiv.innerHTML = `<div class="loading-spinner" style="width:40px;height:40px;border:4px solid #fff;border-top-color:var(--accent-gold);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px;"></div>
+                                <div>PDFを生成中... (${selectedProjects.length}枚)</div>
+                                <div style="font-size:0.8rem;margin-top:10px;opacity:0.7;">数秒かかる場合があります</div>`;
+        document.body.appendChild(loadingDiv);
+
+        try {
+            const doc = await generateBulkPdf(selectedProjects, templates, config);
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            let filename = typeSelect.value === '月報' ? `${y}_${m}_${name}月報.pdf` : `${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`;
+            doc.save(filename);
+            
+            for (const p of selectedProjects) { if (p.status === 'draft') { p.status = 'sent'; await saveProject(p); } }
+            exitSelectionMode();
+            renderList();
+            if (window.showHealingDialog) window.showHealingDialog("一括出力が完了しました。ステータスを「完了」に更新しました。");
+        } catch (err) {
+            console.error("Bulk PDF failed:", err);
+            alert("PDFの生成中にエラーが発生しました: " + err.message);
+        } finally {
+            document.body.removeChild(loadingDiv);
+        }
     };
 }
 window.handleBulkPdf = handleBulkPdf;
