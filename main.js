@@ -264,13 +264,9 @@ function renderProjectCardHtml(p, geppoLabels) {
     }
 
     return `
-        <div class="project-card fade-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
-            ${isSelectionMode ? `
-                <div class="card-selection-indicator selection-mode-active ${isSelected ? 'selected' : ''}" style="display: flex !important; position: absolute; top: 12px; left: 12px; width: 24px; height: 24px; border: 2px solid var(--accent-gold); border-radius: 50%; align-items: center; justify-content: center; z-index: 10; background: white;">
-                    ${isSelected ? '✓' : ''}
-                </div>
-            ` : ''}
-            <div class="project-card-body" style="${isSelectionMode ? 'padding-left: 50px;' : ''}">
+        <div class="project-card fade-in ${isSelected ? 'selected' : ''}" data-id="${p.id}">
+            <div class="card-selection-indicator">✓</div>
+            <div class="project-card-body">
                 <div class="project-card-header">
                     <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
                     <span class="project-date">📅 ${dateStr}</span>
@@ -292,17 +288,7 @@ function renderProjectCardHtml(p, geppoLabels) {
 }
 
 function bindCardEvents(container) {
-    container.querySelectorAll('.project-card').forEach(card => {
-        const id = card.dataset.id;
-        card.addEventListener('click', (e) => { 
-            if (isSelectionMode) {
-                toggleSelection(id); 
-            } else {
-                if (e.target.closest('.card-action-btn')) return; 
-                window.handleCardPreview(id);
-            }
-        });
-    });
+    // Card event binding is now handled by Global Click Listener in bindGlobalEvents
 }
 
 window.updateSelectionUI = () => {
@@ -310,12 +296,12 @@ window.updateSelectionUI = () => {
     if (!container) return;
     
     if (!isSelectionMode) {
-        container.innerHTML = ''; // Hide fixed bar in normal mode (button is in list)
-        container.style.pointerEvents = 'none';
+        document.body.classList.remove('selection-mode');
+        container.innerHTML = ''; 
     } else {
-        container.style.pointerEvents = 'auto';
+        document.body.classList.add('selection-mode');
         container.innerHTML = `
-            <div style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px); padding: 18px; border-radius: 24px; box-shadow: 0 10px 50px rgba(0,0,0,0.25); display: flex; gap: 12px; align-items: center; width: 92%; max-width: 480px; border: 1px solid rgba(0,0,0,0.1); animation: slideUp 0.3s ease-out;">
+            <div style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px); padding: 18px; border-radius: 24px; box-shadow: 0 10px 50px rgba(0,0,0,0.25); display: flex; gap: 12px; align-items: center; width: 92%; max-width: 480px; border: 1px solid rgba(0,0,0,0.1); animation: slideUp 0.3s ease-out; pointer-events: auto;">
                 <div style="font-size: 1rem; font-weight: bold; color: var(--accent-gold); min-width: 40px; text-align: center;">
                     <span id="dock-count" style="font-size: 1.2rem;">${selectedIds.size}</span>件
                 </div>
@@ -331,7 +317,12 @@ window.toggleSelection = (id) => {
     if (selectedIds.has(id)) selectedIds.delete(id); 
     else selectedIds.add(id); 
     window.updateSelectionUI();
-    renderList(); 
+    
+    // Visually update ONLY the clicked card for maximum performance
+    const card = document.querySelector(`.project-card[data-id="${id}"]`);
+    if (card) {
+        card.classList.toggle('selected');
+    }
 };
 
 window.enterSelectionMode = async (firstId) => {
@@ -903,19 +894,32 @@ function bindGlobalEvents() {
         });
     }
 
-    safeBind('btn-bulk-pdf-exec', 'onclick', handleBulkPdf);
-
-    // Global Click Listener for Deselection (Tap background to exit selection mode)
+    // GLOBAL CLICK LISTENER (Event Delegation)
     document.addEventListener('click', (e) => {
-        if (!isSelectionMode) return;
-        
-        // If clicking a card or the bulk button, don't exit
-        if (e.target.closest('.project-card') || e.target.closest('#btn-bulk-pdf-exec')) return;
-        
-        // If clicking a modal or detail view, don't exit
-        if (e.target.closest('.modal-content') || e.target.closest('.scanner-overlay')) return;
-        
-        exitSelectionMode();
+        const card = e.target.closest('.project-card');
+        const actionBtn = e.target.closest('.card-action-btn');
+        const selectionTrigger = e.target.closest('.selection-trigger-container button');
+
+        if (selectionTrigger) {
+            window.enterSelectionMode();
+            return;
+        }
+
+        if (card) {
+            const id = card.dataset.id;
+            if (isSelectionMode) {
+                window.toggleSelection(id);
+            } else if (!actionBtn) {
+                window.handleCardPreview(id);
+            }
+            return;
+        }
+
+        // Global Click Listener for Deselection (Tap background to exit selection mode)
+        if (isSelectionMode) {
+            if (e.target.closest('#selection-bar-container') || e.target.closest('.modal-content') || e.target.closest('.scanner-overlay')) return;
+            // Removed auto-exit on background click to prevent accidental closure on mobile
+        }
     });
 
     // Search Input binding
