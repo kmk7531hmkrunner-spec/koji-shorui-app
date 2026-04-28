@@ -972,77 +972,7 @@ function updateSelectionUI() {
     }
 }
 
-async function handleBulkDelete() {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`${selectedIds.size}件の書類をすべて削除しますか？\nこの操作は取り消せません。`)) return;
-    
-    await Promise.all(Array.from(selectedIds).map(id => deleteProject(id)));
-    
-    await exitSelectionMode();
-    alert('削除が完了しました');
-}
-
-async function handleBulkPdf() {
-    if (!isSelectionMode) {
-        isSelectionMode = true;
-        renderList();
-        return;
-    }
-    if (selectedIds.size === 0) return;
-
-    const modal = document.getElementById('pdf-filename-modal');
-    const nameInput = document.getElementById('pdf-user-name');
-    const typeSelect = document.getElementById('pdf-doc-type');
-    
-    nameInput.value = localStorage.getItem('last_user_name') || '';
-    modal.classList.remove('hidden');
-
-    document.getElementById('btn-pdf-cancel').onclick = () => modal.classList.add('hidden');
-    document.getElementById('btn-pdf-exec').onclick = async () => {
-        const name = nameInput.value.trim();
-        if (!name) { alert('氏名を入力してください'); return; }
-        
-        localStorage.setItem('last_user_name', name);
-        modal.classList.remove('hidden');
-        
-        const ids = Array.from(selectedIds);
-        const projects = [];
-        for (const id of ids) {
-            const p = await getProject(id);
-            if (p) projects.push(p);
-        }
-        const config = await getPdfConfig();
-        const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
-        
-        const doc = await generateBulkPdf(projects, templates, config);
-        
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        
-        let filename = '';
-        if (typeSelect.value === '月報') {
-            filename = `${y}_${m}_${name}月報.pdf`;
-        } else {
-            filename = `${y}_${m}_${d}_${name}_${typeSelect.value}.pdf`;
-        }
-        doc.save(filename);
-        
-        // Move to 'sent'
-        for (const p of projects) {
-            if (p.status === 'draft') {
-                p.status = 'sent';
-                await saveProject(p);
-            }
-        }
-
-        exitSelectionMode();
-        renderList();
-        console.log("Triggering healing dialog after Bulk PDF...");
-        showHealingDialog("一括出力が完了しました。選択したすべての書類のステータスを「完了」に更新しました。");
-    };
-}
+// Redundant bulk functions removed to resolve SyntaxError
 
 async function startScanner(file) {
     if (!file) return;
