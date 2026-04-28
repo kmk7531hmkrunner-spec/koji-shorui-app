@@ -7,10 +7,10 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
     return false;
 };
 
-import { getAllProjects, saveProject, deleteProject, getProject, generateDraftName } from './src/storage.js';
-import { adaptiveThreshold } from './src/image-utils.js';
-import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js';
-import { getPdfConfig } from './src/config-manager.js';
+import { getAllProjects, saveProject, deleteProject, getProject, generateDraftName } from './src/storage.js?v=5';
+import { adaptiveThreshold } from './src/image-utils.js?v=5';
+import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js?v=5';
+import { getPdfConfig } from './src/config-manager.js?v=5';
 
 console.log("Main script loading (Intelligent Workflow Build v32)...");
 
@@ -75,7 +75,8 @@ let selectedCalendarDate = null; // YYYY-MM-DD
 
 // --- Harden Boot Logic ---
 async function bootApp() {
-    if (window.logBoot) window.logBoot("🚀 Starting Application Boot (v35)...");
+    if (window.logBoot) window.logBoot("🚀 ULTRA BOOT v5 START");
+    document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;top:5px;right:5px;background:#22c55e;color:white;font-size:8px;padding:2px 6px;border-radius:10px;z-index:999999;font-weight:bold;box-shadow:0 0 10px rgba(34,197,94,0.5);">LIVE v5</div>');
     try {
         if (window.logBoot) window.logBoot("Stage 1: Setup Elements");
         setupElements();

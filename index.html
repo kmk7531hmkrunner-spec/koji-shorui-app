@@ -66,7 +66,6 @@
 <body class="loading-state">
     <div id="app">
         <!-- Force Refresh & Version UI removed -->
-        <div id="selection-bar-container"></div>
 
         <!-- Global Navigation Wrapper -->
         <div id="global-nav">
@@ -118,11 +117,7 @@
             <div id="project-list" class="project-list" style="padding-bottom: 120px !important;"></div>
             
             <!-- Selection Action Bar Area -->
-            <div id="selection-bar-container" class="selection-bar-container" style="position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; z-index: 10000; pointer-events: none;">
-                <!-- Content injected via JS -->
-            </div>
-            
-            <!-- Multi-select dock removed -->
+            <div id="selection-bar-container" class="selection-bar-container"></div>
         </div>
 
         <!-- Calendar View (Independent Top-Level View) -->
@@ -307,10 +302,9 @@
         </div>
     </div>
 
-    <!-- Bulk Action Bar Container (Managed by main-v2.js) -->
-    <div id="selection-bar-container"></div>
+    <!-- Bulk Action Bar Container managed by main-v2.js -->
 
-    <div id="app-version-tag" style="position:fixed; bottom:2px; left:5px; font-size:9px; color:rgba(0,0,0,0.3); z-index:99999; pointer-events:none; background:rgba(255,255,255,0.5); padding:2px 5px; border-radius:4px;">v20260428_ULTRA_v5.0.0</div>
+    <div id="app-version-tag" style="position:fixed; bottom:2px; left:5px; font-size:10px; color:white; z-index:99999; pointer-events:none; background:#ef4444; padding:4px 8px; border-radius:4px; font-weight:bold; box-shadow:0 0 10px rgba(239,68,68,0.5);">v20260428_ULTRA_v5.0.0 (NEW ENGINE)</div>
     <script type="module" src="./main-v2.js?t=1714316000"></script>
     <script>
         // Emergency Override for Bot Greeting
