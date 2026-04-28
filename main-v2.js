@@ -9,7 +9,6 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
 
 import { getAllProjects, saveProject, deleteProject, getProject, generateDraftName } from './src/storage.js?v=5';
 import { adaptiveThreshold } from './src/image-utils.js?v=5';
-import { generateSinglePdf, generateBulkPdf, drawProjectToCanvas } from './src/pdf-engine.js?v=5';
 import { getPdfConfig } from './src/config-manager.js?v=5';
 
 console.log("Main script loading (Intelligent Workflow Build v32)...");
@@ -384,7 +383,7 @@ async function handleBulkPdf() {
         document.body.appendChild(loadingDiv);
 
         try {
-            const doc = await generateBulkPdf(selectedProjects, templates, config, (current, total) => {
+            const doc = await window.generateBulkPdf(selectedProjects, templates, config, (current, total) => {
                 const text = document.getElementById('bulk-progress-text');
                 if (text) text.textContent = `PDFを生成中... (${current}/${total})`;
             });
@@ -555,7 +554,7 @@ window.handleCardPreview = async (id) => {
     
     const bgUrl = p.type === 'kanryo' ? '/images/kanrryoutemp.jpg' : (p.type === 'marusan' ? '/images/marusan_report.jpg' : '/images/geppo.jpg');
     const config = await getPdfConfig();
-    const canvas = await drawProjectToCanvas(p, bgUrl, config);
+    const canvas = await window.drawProjectToCanvas(p, bgUrl, config);
     
     els['preview-canvas-container'].innerHTML = '';
     els['preview-canvas-container'].appendChild(canvas);
@@ -889,7 +888,7 @@ async function handleShowPreview() {
     overlay.classList.remove('hidden');
     const bgUrl = currentProject.type === 'kanryo' ? '/images/kanrryoutemp.jpg' : (currentProject.type === 'marusan' ? '/images/marusan_report.jpg' : '/images/geppo.jpg');
     const config = await getPdfConfig();
-    const canvas = await drawProjectToCanvas(currentProject, bgUrl, config);
+    const canvas = await window.drawProjectToCanvas(currentProject, bgUrl, config);
     els['preview-canvas-container'].innerHTML = '';
     els['preview-canvas-container'].appendChild(canvas);
     els['btn-close-preview'].onclick = () => overlay.classList.add('hidden');
@@ -1091,7 +1090,7 @@ async function generatePdf(id, userName, docTypeName) {
     const p = await getProject(id); if (!p) return;
     const bgUrl = p.type === 'kanryo' ? '/images/kanrryoutemp.jpg' : (p.type === 'marusan' ? '/images/marusan_report.jpg' : '/images/geppo.jpg');
     const config = await getPdfConfig();
-    const doc = await generateSinglePdf(p, bgUrl, config);
+    const doc = await window.generateSinglePdf(p, bgUrl, config);
     
     // Format: yyyy_mm_dd_"名前"_"作成書類名"
     const now = new Date(p.date || Date.now());
