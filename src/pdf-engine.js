@@ -76,8 +76,9 @@ function drawTextOnCanvas(ctx, text, x, y, width, fontSize, align = 'left', maxL
  * Draws a project's data onto the canvas. Used for both PDF generation and Editor Preview.
  */
 export async function drawProjectToCanvas(project, backgroundImage, config, targetCanvas = null) {
-  const CANVAS_WIDTH = 2480;
-  const CANVAS_HEIGHT = 3508;
+  // Reduced resolution for mobile stability (approx 200dpi)
+  const CANVAS_WIDTH = 1754;
+  const CANVAS_HEIGHT = 2480;
   
   const canvas = targetCanvas || document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
@@ -213,14 +214,26 @@ export async function generateSinglePdf(project, backgroundImage, config) {
   return doc;
 }
 
-export async function generateBulkPdf(projects, templates, config) {
+export async function generateBulkPdf(projects, templates, config, onProgress = null) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   for (let i = 0; i < projects.length; i++) {
+    if (onProgress) onProgress(i + 1, projects.length);
     if (i > 0) doc.addPage();
     const p = projects[i];
     const bg = templates[p.type];
-    const canvas = await drawProjectToCanvas(p, bg, config);
-    doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+    
+    // Use a try-catch for each page to prevent total failure
+    try {
+      const canvas = await drawProjectToCanvas(p, bg, config);
+      doc.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      // Free memory: Clear canvas references if possible
+      canvas.width = 1; canvas.height = 1;
+    } catch (err) {
+      console.error(`Page ${i+1} failed:`, err);
+    }
+    
+    // Give browser time to breathe/GC
+    await new Promise(r => setTimeout(r, 100));
   }
   return doc;
 }

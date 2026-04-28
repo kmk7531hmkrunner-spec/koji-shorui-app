@@ -370,18 +370,23 @@ async function handleBulkPdf() {
             if (p) selectedProjects.push(p);
         }
         const config = await getPdfConfig();
-        const templates = { 'kanryo': './images/kanrryoutemp.jpg', 'marusan': './images/marusan_report.jpg', 'geppo': './images/geppo.jpg' };
+        const templates = { 'kanryo': '/images/kanrryoutemp.jpg', 'marusan': '/images/marusan_report.jpg', 'geppo': '/images/geppo.jpg' };
         
         // Show Loading UI
         const loadingDiv = document.createElement('div');
         loadingDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999999;font-weight:bold;';
-        loadingDiv.innerHTML = `<div class="loading-spinner" style="width:40px;height:40px;border:4px solid #fff;border-top-color:var(--accent-gold);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px;"></div>
-                                <div>PDFを生成中... (${selectedProjects.length}枚)</div>
-                                <div style="font-size:0.8rem;margin-top:10px;opacity:0.7;">数秒かかる場合があります</div>`;
+        loadingDiv.innerHTML = `
+            <div class="loading-spinner" style="width:40px;height:40px;border:4px solid #fff;border-top-color:var(--accent-gold);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px;"></div>
+            <div id="bulk-progress-text">PDFを生成中... (0/${selectedProjects.length})</div>
+            <div style="font-size:0.8rem;margin-top:10px;opacity:0.7;">数秒かかる場合があります</div>
+        `;
         document.body.appendChild(loadingDiv);
 
         try {
-            const doc = await generateBulkPdf(selectedProjects, templates, config);
+            const doc = await generateBulkPdf(selectedProjects, templates, config, (current, total) => {
+                const text = document.getElementById('bulk-progress-text');
+                if (text) text.textContent = `PDFを生成中... (${current}/${total})`;
+            });
             const now = new Date();
             const y = now.getFullYear();
             const m = String(now.getMonth() + 1).padStart(2, '0');
