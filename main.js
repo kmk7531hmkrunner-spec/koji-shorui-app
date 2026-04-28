@@ -265,7 +265,6 @@ function renderProjectCardHtml(p, geppoLabels) {
 
     return `
         <div class="project-card fade-in ${isSelected ? 'selected' : ''}" data-id="${p.id}">
-            <div class="card-selection-indicator">✓</div>
             <div class="project-card-body">
                 <div class="project-card-header">
                     <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
@@ -896,7 +895,25 @@ function bindGlobalEvents() {
     }
 
     // GLOBAL CLICK LISTENER (Event Delegation)
+    document.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.project-card');
+        if (!card || isSelectionMode) return;
+        
+        isLongPressAction = false;
+        longPressTimeout = setTimeout(() => {
+            isLongPressAction = true;
+            window.enterSelectionMode(card.dataset.id);
+        }, 650);
+    }, {passive: true});
+
+    document.addEventListener('touchend', () => clearTimeout(longPressTimeout));
+    document.addEventListener('touchmove', () => clearTimeout(longPressTimeout));
+
     document.addEventListener('click', (e) => {
+        if (isLongPressAction) {
+            isLongPressAction = false;
+            return;
+        }
         const card = e.target.closest('.project-card');
         const actionBtn = e.target.closest('.card-action-btn');
         const selectionTrigger = e.target.closest('.selection-trigger-container button');
