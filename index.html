@@ -303,11 +303,13 @@
                 お気づきの点やご要望を教えてください。
             </p>
             <div class="form-group">
-                <textarea id="report-text" rows="6" placeholder="報告内容を詳しく記入してください" style="width: 100%; border-radius: 12px; padding: 12px;"></textarea>
+                <textarea id="report-text" 
+                    oninput="document.getElementById('btn-report-send-link').href = 'mailto:kmk7531.hmk.runner@gmail.com?subject=' + encodeURIComponent('【おやすみの宛先】不具合・要望報告') + '&body=' + encodeURIComponent(this.value);"
+                    rows="6" placeholder="報告内容を詳しく記入してください" style="width: 100%; border-radius: 12px; padding: 12px;"></textarea>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" id="btn-report-cancel">キャンセル</button>
-                <button class="btn btn-primary" id="btn-report-send">報告を送信する</button>
+                <a id="btn-report-send-link" href="mailto:kmk7531.hmk.runner@gmail.com" target="_blank" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; text-decoration: none; flex: 1;">報告を送信する</a>
             </div>
         </div>
     </div>
@@ -320,7 +322,7 @@
     </div>
 
     <div id="app-version-tag" style="position:fixed; bottom:2px; left:5px; font-size:9px; color:rgba(0,0,0,0.3); z-index:99999; pointer-events:none; background:rgba(255,255,255,0.5); padding:2px 5px; border-radius:4px;">v20260428_REVOLUTION_v4.0.0</div>
-    <script type="module" src="/main.js"></script>
+    <script type="module" src="./main.js"></script>
     <script>
         // Emergency Override for Bot Greeting
         window.addEventListener('DOMContentLoaded', () => {

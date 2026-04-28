@@ -1137,24 +1137,7 @@ function bindReportEvents() {
         };
     }
     if (els['btn-report-send']) {
-        els['btn-report-send'].onclick = () => {
-            const text = els['report-text'].value.trim();
-            if (!text) { alert('内容を入力してください'); return; }
-            
-            const subject = encodeURIComponent("【おやすみの宛先】不具合・要望報告");
-            const body = encodeURIComponent(text);
-            
-            const mailtoLink = `mailto:kmk7531.hmk.runner@gmail.com?subject=${subject}&body=${body}`;
-            const a = document.createElement('a');
-            a.href = mailtoLink;
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            if (els['report-modal']) els['report-modal'].classList.add('hidden');
-            alert("メールアプリを起動しました。そのまま送信してください。");
-        };
+        // Redundant onclick removed. Using native <a> tag in index.html for stability.
     }
 }
 
