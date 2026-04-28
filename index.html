@@ -6,90 +6,83 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>工事書類管理 - プロ仕様</title>
-    <link rel="stylesheet" href="style.css?v=20260427_v23">
+    <link rel="stylesheet" href="app-release.css?v=20260427_FINAL_STABLE_02">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <style>
         .chip-group { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
         .chip-btn { 
-            padding: 0.6rem 1rem; border-radius: 20px; border: 1px solid #e2e8f0; 
-            background-color: #fff; color: #1e293b; font-size: 0.9rem; font-weight: 500; 
+            padding: 0.6rem 1rem; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); 
+            background-color: rgba(154, 52, 18, 0.4); color: #ffedd5; font-size: 0.9rem; font-weight: 500; 
             cursor: pointer; transition: all 0.2s ease; 
         }
         .chip-btn.active { 
-            background-color: #0ea5e9; color: white; border-color: #0ea5e9; 
-            box-shadow: 0 4px 8px rgba(14, 165, 233, 0.3); transform: translateY(-1px); 
+            background-color: var(--accent-gold); color: #431407; border-color: var(--accent-gold); 
+            box-shadow: 0 4px 12px rgba(253, 224, 71, 0.3); transform: translateY(-1px); 
         }
 
-        /* Letter UI Styles v32 */
-        .healing-overlay {
+        /* Multi-selection CSS removed for stability */
+
+        .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 100000; display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden; transition: all 0.5s ease;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; z-index: 200000;
         }
-        .healing-overlay.show { opacity: 1; visibility: visible; }
-        .healing-letter-paper {
-            width: 90%; max-width: 480px;
-            background: #fdfcf0; /* Creamy stationery color */
-            background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);
-            background-size: 20px 20px;
-            border-radius: 4px; padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 0 100px rgba(0,0,0,0.05);
-            position: relative; overflow: visible;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .photo-frame {
-            width: 100%; background: white; padding: 10px 10px 40px 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transform: rotate(-2deg); margin-bottom: 30px;
-            border: 1px solid #ddd;
-        }
-        .healing-bg-img {
-            width: 100%; aspect-ratio: 4/3; object-fit: cover;
-        }
-        .letter-body {
-            width: 100%; text-align: left;
-            font-family: 'Noto Serif JP', serif;
-            color: #334155; line-height: 2; font-size: 1.1rem;
-            position: relative;
-        }
-        .healing-message { margin-bottom: 20px; }
-        .btn-heal-close {
-            margin-top: 20px; background: transparent; color: #64748b;
-            border: 1px solid #cbd5e1; padding: 8px 20px; border-radius: 4px;
-            font-size: 0.9rem; cursor: pointer; transition: all 0.3s;
-            align-self: flex-end;
-        }
-        .btn-heal-close:hover { background: #f1f5f9; color: #334155; }
+        .modal-overlay.active { display: flex !important; }
+        .hidden { display: none !important; }
 
-        /* Report Icon Styles v29 */
-        .header-top-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        .report-btn {
-            background: rgba(255, 255, 255, 0.2); border: none; width: 36px; height: 36px;
-            border-radius: 10px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; cursor: pointer; transition: all 0.3s ease;
-            margin-right: 15px;
+        .card-selection-indicator {
+            position: absolute !important; top: 15px !important; left: 10px !important;
+            width: 28px !important; height: 28px !important;
+            border: 2px solid var(--accent-gold) !important; border-radius: 50% !important;
+            z-index: 100 !important; display: none; align-items: center; justify-content: center;
+            background: white !important; font-weight: bold !important; color: transparent !important;
         }
-        .report-btn:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.05); }
+        .card-selection-indicator.selection-mode-active { display: flex !important; }
+        .card-selection-indicator.selected { background: var(--accent-gold) !important; color: white !important; }
+
+        .sticky-bottom-bar {
+            position: fixed !important; bottom: 0 !important; left: 0 !important; width: 100% !important;
+            background: rgba(255, 255, 255, 0.98) !important; backdrop-filter: blur(20px) !important;
+            padding: 12px 15px !important; box-shadow: 0 -10px 40px rgba(0,0,0,0.15) !important;
+            z-index: 10000 !important; border-top: 1px solid rgba(0,0,0,0.08) !important;
+        }
+
+        .report-btn:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- Search Bar moved -->
+        <!-- Force Refresh & Version UI -->
+        <div style="background: var(--accent-gold); color: #431407; padding: 5px 15px; font-size: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 100001; position: relative;">
+            <span>SYSTEM v4.0.0-GOLD (REVOLUTION)</span>
+            <button onclick="window.location.href = window.location.origin + window.location.pathname + '?t=' + new Date().getTime()" style="background:rgba(255,255,255,0.3); border:none; border-radius:4px; padding:2px 8px; font-weight:bold; cursor:pointer;">⚡ 最新版を強制取得</button>
+        </div>
 
         <!-- Global Navigation Wrapper -->
         <div id="global-nav">
             <header class="app-header app-header-logo" id="main-app-header">
-                <div class="header-top-bar">
-                    <div class="app-logo-wrapper" onclick="window.switchTab('draft')" style="cursor:pointer; flex:1; display: flex; align-items: center; gap: 12px;">
-                        <div class="house-icon" style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.3));">🏠</div>
-                        <div style="display: flex; flex-direction: column; justify-content: center;">
-                            <h1 class="app-logo" style="letter-spacing: 1px; font-family: 'Noto Serif JP', serif; margin: 0; font-size: 1.6rem;">おやすみの宛先</h1>
-                            <span class="logo-subtitle" style="text-align: left; letter-spacing: 1px; font-weight: 500; opacity: 0.8; font-size: 0.65rem;">報告書作成アプリ</span>
+                <div class="header-top-bar" style="position: relative; padding: 0 10px;">
+                    <div class="app-logo-wrapper" onclick="window.switchTab('draft')" style="cursor:pointer; flex:1; display: flex; align-items: center; justify-content: center; padding: 10px 0;">
+                        <div style="position: relative; width: 280px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                            <!-- Logo Illustration -->
+                            <img src="app_logo.png" style="position: absolute; left: 0; height: 70px; width: 70px; border-radius: 50%; object-fit: cover; filter: brightness(0.8) contrast(1.1) drop-shadow(0 0 10px rgba(181, 154, 93, 0.3));">
+                            
+                            <!-- Designed Title Text -->
+                            <div style="margin-left: 60px; display: flex; flex-direction: column; align-items: flex-start;">
+                                <div style="display: flex; align-items: baseline;">
+                                    <span style="font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 28px; color: var(--accent-gold); letter-spacing: 4px;">おやすみ</span>
+                                    <span style="font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: 18px; color: var(--text-primary); margin-left: 5px; opacity: 0.6;">の</span>
+                                </div>
+                                <div style="margin-top: -5px;">
+                                    <span style="font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 32px; color: var(--text-primary); letter-spacing: 8px;">宛先</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button id="btn-report-issue" class="report-btn" title="不具合・改善要望">📮</button>
+                    <!-- Refined Feedback Button (Top-Right) -->
+                    <button class="report-btn" onclick="window.openReportModal()" style="position: absolute; right: 10px; top: 10px; background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.2); color: #dc2626; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; z-index: 1001; transition: all 0.2s ease;">
+                        📮
+                    </button>
                 </div>
             </header>
 
@@ -108,18 +101,35 @@
         <div id="project-list-view" class="view-container fade-in">
             <!-- Permanent Top Bulk Action Area -->
             <div id="top-bulk-container" class="top-bulk-container">
-                <div class="bulk-btns-row">
-                    <button class="btn btn-primary btn-bulk-top" id="btn-bulk-pdf-exec">
-                        📄 まとめてPDF
-                    </button>
-                    <button class="btn btn-danger btn-bulk-top hidden" id="btn-bulk-delete-exec">
-                        🗑 まとめて削除
+                <div class="bulk-btns-row" style="justify-content: center;">
+                    <button class="btn btn-primary" onclick="window.showTypeModal()" style="background: var(--accent-gold); color: white; font-weight: bold; padding: 12px 25px; font-size: 1rem; width: 100%; max-width: 300px; border-radius: 14px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);">
+                        ➕ 新規作成
                     </button>
                 </div>
             </div>
 
-            <div id="project-list" class="project-list"></div>
-            <button class="fab-plus" id="fab-plus">+</button>
+            <div id="project-list" class="project-list" style="padding-bottom: 180px !important;"></div>
+
+            <!-- Unified Action Dock v4.0 -->
+            <div id="sticky-bottom-bar" class="sticky-bottom-bar">
+                <!-- Normal Mode -->
+                <div id="dock-normal" class="dock-normal" style="display: flex; justify-content: center;">
+                    <button class="btn btn-primary" onclick="window.enterSelectionMode()" style="background: #0ea5e9; padding: 12px 60px; border-radius: 14px; font-weight: bold; font-size: 1.1rem;">
+                        複数選択
+                    </button>
+                </div>
+                <!-- Selection Mode -->
+                <div id="dock-selection" class="dock-selection" style="display: none; gap: 10px; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="font-size: 0.9rem; font-weight: bold; color: var(--accent-gold); white-space: nowrap;">
+                        <span id="dock-count">0</span>件選択
+                    </div>
+                    <div style="display: flex; gap: 8px; flex: 1; justify-content: flex-end;">
+                        <button class="btn btn-danger" onclick="window.confirmDeleteSelected()" style="flex: 1; max-width: 100px;">🗑 削除</button>
+                        <button class="btn btn-primary" id="btn-bulk-pdf-exec" style="flex: 2; max-width: 160px; background: #0ea5e9; border:none;">📄 まとめてPDF</button>
+                        <button class="btn btn-outline" onclick="window.exitSelectionMode()" style="padding: 10px 15px;">✕</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Calendar View (Independent Top-Level View) -->
@@ -158,12 +168,13 @@
         <!-- Chatbot -->
         <div id="bot-container" class="bot-container hidden">
             <div class="bot-header">
-                <span>ガイドボット</span>
-                <button id="btn-close-bot">✕</button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="btn-report-issue-bot" style="background:none; border:none; font-size:1.2rem; cursor:pointer; padding:4px;">📮</button>
+                    <span>おやすみの案内人</span>
+                </div>
+                <button id="btn-close-bot">×</button>
             </div>
-            <div id="bot-messages" class="bot-messages">
-                <div class="message bot">こんにちは！当社の書類作成ルールやアプリの使い方についてお答えします。知りたいことを入力するか、下のボタンを選んでください。</div>
-            </div>
+            <div id="bot-messages" class="bot-messages"></div>
             <div class="bot-input-area">
                 <input type="text" id="bot-input" placeholder="質問を入力...">
                 <button id="btn-send-bot">送信</button>
@@ -274,7 +285,10 @@
             </div>
             <div class="letter-body">
                 <div class="healing-message" id="healing-text">
-                    今日も一日、本当にお疲れ様でした。<br>あなたの静かな頑張りを、私たちは知っています。
+                    お疲れ様でした。あなたの努力は、きっと誰かの力になっています。
+                </div>
+                <div style="font-size: 0.7rem; color: #9a3412; opacity: 0.6; margin-top: 20px; text-align: center; border-top: 1px dashed rgba(154, 52, 18, 0.2); padding-top: 10px;">
+                    PDFを出力中です。データは完了タブに移動しました
                 </div>
             </div>
             <button class="btn-heal-close" id="btn-close-healing">手紙を閉じる</button>
@@ -298,6 +312,40 @@
         </div>
     </div>
 
-    <script type="module" src="app-v34.js?v=20260427_v34"></script>
+    <!-- Bulk Action Bar -->
+    <div id="bulk-action-bar" class="bulk-action-bar hidden">
+        <div class="bulk-info"><span id="selected-count">0</span>件選択中</div>
+        <button class="btn btn-danger" onclick="window.confirmDeleteSelected()">選択した項目を削除する</button>
+        <button class="btn btn-outline" onclick="window.exitSelectionMode()">キャンセル</button>
+    </div>
+
+    <div id="app-version-tag" style="position:fixed; bottom:2px; left:5px; font-size:9px; color:rgba(0,0,0,0.3); z-index:99999; pointer-events:none; background:rgba(255,255,255,0.5); padding:2px 5px; border-radius:4px;">v20260428_REVOLUTION_v4.0.0</div>
+    <script type="module" src="/main.js"></script>
+    <script>
+        // Emergency Override for Bot Greeting
+        window.addEventListener('DOMContentLoaded', () => {
+            const checkBot = setInterval(() => {
+                const botMsgContainer = document.getElementById('bot-messages');
+                if (botMsgContainer) {
+                    if (botMsgContainer.children.length === 0) {
+                        const div = document.createElement('div');
+                        div.className = 'message bot';
+                        div.innerText = "【システム案内】お疲れ様です！(v4.0.0-REVOLUTION)\n案内に沿って番号を選んでください。\n\n(1) 使い方\n(2) 会社ルール（丸産など）\n(3) 駐車場原本が必要な会社\n(4) 📮不具合報告・要望";
+                        botMsgContainer.appendChild(div);
+                    }
+                    clearInterval(checkBot);
+                }
+            }, 1000);
+
+            // Global Feedback Modal Trigger
+            window.openReportModal = () => {
+                const modal = document.getElementById('report-modal');
+                if (modal) {
+                    modal.classList.add('active');
+                    modal.classList.remove('hidden');
+                }
+            };
+        });
+    </script>
 </body>
 </html>

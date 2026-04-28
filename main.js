@@ -22,6 +22,7 @@ let searchQuery = '';
 let isSelectionMode = false;
 let selectedIds = new Set();
 let currentProject = null;
+let projects = []; // Global projects array
 const HEALING_MESSAGES = [
     "ねえ、自分。今日一日、本当によくやったね。あの泥臭い時間も、孤独な葛藤も、全部、僕がなりたかった『誇れる自分』への大切な階段なんだよ。",
     "無駄な時間なんて一秒もなかった。今日費やしたエネルギーは、確実に僕の理想の未来を形作っている。それを、僕だけはちゃんと信じてあげよう。",
@@ -42,7 +43,7 @@ const STATIONERY_STYLES = [
 ];
 
 // Tab Switcher Helper
-window.switchTab = (tabName) => {
+window.switchTab = async (tabName) => {
     // RESET SEARCH & MODALS ON NAVIGATION
     if (els['search-input']) {
         els['search-input'].value = '';
@@ -64,36 +65,44 @@ window.switchTab = (tabName) => {
     if (els['fab-plus']) {
         els['fab-plus'].style.display = (currentTab === 'draft') ? 'flex' : 'none';
     }
-    renderList();
+    await renderList();
 };
 let longPressTimeout = null;
 let isLongPressAction = false;
 let currentCalendarDate = new Date();
 let selectedCalendarDate = null; // YYYY-MM-DD
 
-// --- Initialization ---
-async function startApp() {
-    if (window.logBoot) window.logBoot("Starting App Logic (Harden Build)...");
+// --- Harden Boot Logic ---
+async function bootApp() {
+    if (window.logBoot) window.logBoot("🚀 Starting Application Boot (v35)...");
     try {
         if (window.logBoot) window.logBoot("Stage 1: Setup Elements");
         setupElements();
         
-        if (window.logBoot) window.logBoot("Stage 2: Initialize Features");
-        await init();
+        if (window.logBoot) window.logBoot("Stage 2: Binding Events");
+        bindGlobalEvents();
+        bindBotEvents();
+        bindReportEvents();
         
-        if (window.logBoot) window.logBoot("Stage 3: App Boot Successful");
+        if (window.logBoot) window.logBoot("Stage 3: Loading Data");
+        projects = await getAllProjects();
+        if (window.logBoot) window.logBoot(`Loaded ${projects.length} projects`);
+        
+        if (window.logBoot) window.logBoot("Stage 4: Rendering Initial View");
+        window.switchTab('draft'); // This handles renderList() internally
+        
+        if (window.logBoot) window.logBoot("✅ App Boot Successful");
     } catch (err) {
-        if (window.logBoot) window.logBoot("BOOT CRASH: " + err.message);
-        console.error("Critical: App start failed", err);
-        // This will be caught by the unhandledrejection or the manual catch
-        throw err; 
+        if (window.logBoot) window.logBoot("❌ BOOT CRASH: " + err.message);
+        console.error("Critical: App boot failed", err);
     }
 }
 
+// Ensure single entry point
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => startApp());
+    document.addEventListener('DOMContentLoaded', bootApp);
 } else {
-    startApp();
+    bootApp();
 }
 
 function setupElements() {
@@ -121,54 +130,21 @@ function setupElements() {
     if (window.logBoot) window.logBoot(`Elements cached: ${Object.keys(els).length}`);
 }
 
-async function init() {
-    if (window.logBoot) window.logBoot("Initializing app features...");
-    // 1. Immediately bind events to ensure UI responsiveness
-    try {
-        bindGlobalEvents();
-        if (window.logBoot) window.logBoot("Global events bound");
-        bindBotEvents();
-        if (window.logBoot) window.logBoot("Bot events bound");
-        bindReportEvents();
-        if (window.logBoot) window.logBoot("Report events bound");
-    } catch (e) {
-        if (window.logBoot) window.logBoot("EVENT BINDING FAILED: " + e.message);
-        throw e;
-    }
-    
-    // 2. Load and render list in background
-    try {
-        if (window.logBoot) window.logBoot("Attempting to switch to draft tab...");
-        window.switchTab('draft');
-        if (window.logBoot) window.logBoot("Initial tab switch complete");
-    } catch (err) {
-        if (window.logBoot) window.logBoot("LIST RENDER FAILED: " + err.message);
-        console.error("List render failed", err);
-    }
-
-    // 3. Bind Search Input
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) {
-        searchInput.oninput = (e) => {
-            searchQuery = e.target.value;
-            renderList();
-        };
-    }
-}
 
 // --- List View Logic ---
 
 async function renderList() {
+    if (window.logBoot) window.logBoot("Refreshing and rendering list...");
+    
     // Hide all view containers first to ensure a clean slate
     document.querySelectorAll('.view-container').forEach(el => {
         el.classList.add('hidden');
     });
 
-    const projects = await getAllProjects();
+    projects = await getAllProjects();
     
     if (searchQuery) {
         // GLOBAL SEARCH MODE
-        document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
         if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
         
         const listContainer = els['project-list'];
@@ -190,23 +166,19 @@ async function renderList() {
 
     if (currentTab === 'sent') {
         if (els['calendar-view']) els['calendar-view'].classList.remove('hidden');
-        if (typeof renderCalendar === 'function') renderCalendar(projects);
+        if (typeof renderCalendar === 'function') await renderCalendar();
         return;
     }
 
     if (els['project-list-view']) els['project-list-view'].classList.remove('hidden');
-    
     const listContainer = els['project-list'];
     if (!listContainer) return;
 
-    // SORT BY OLDEST FIRST (Ascending ID)
-    let filtered = projects.filter(p => p.status === 'draft').sort((a, b) => a.id.localeCompare(b.id));
+    // SORT BY DATE (Oldest First)
+    let filtered = projects.filter(p => p.status === 'draft').sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
     // Calculate Geppo labels
     const geppoLabels = generateGeppoLabels(projects);
-
-    // Filter by search query
-    filtered = filterBySearch(filtered, searchQuery);
 
     if (filtered.length === 0) {
         listContainer.innerHTML = `<div class="empty-state" style="padding:40px; text-align:center; color:#94a3b8;"><p>下書きはありません</p></div>`;
@@ -234,10 +206,11 @@ function filterBySearch(list, query) {
 
 function generateGeppoLabels(allProjects) {
     const geppoCounts = {}; 
-    const sortedGeppo = [...allProjects].filter(p => p.type === 'geppo').sort((a,b) => a.id.localeCompare(b.id));
+    const sortedGeppo = [...allProjects].filter(p => p.type === 'geppo').sort((a,b) => (a.date || "").localeCompare(b.date || ""));
     const labels = {}; 
     sortedGeppo.forEach(p => {
-        const ym = p.date ? p.date.substring(0, 7).replace('-', '年') + '月' : '時期未定';
+        const fd = p.formData || {};
+        const ym = (fd.geppo_year && fd.geppo_month) ? `${fd.geppo_year}年${fd.geppo_month}月` : (p.date ? p.date.substring(0, 7).replace('-', '年') + '月' : '時期未定');
         geppoCounts[ym] = (geppoCounts[ym] || 0) + 1;
         labels[p.id] = geppoCounts[ym] > 1 ? `${ym} (${geppoCounts[ym]}枚目)` : ym;
     });
@@ -258,20 +231,30 @@ function renderProjectCardHtml(p, geppoLabels) {
             <div class="info-row"><strong>現場名:</strong> ${displaySite}</div>
         `;
     } else if (p.type === 'geppo') {
+        const address = fd.address || '';
+        const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
         mainInfoHtml = `
             <div class="info-row"><strong>年月:</strong> ${geppoLabels[p.id] || ''}</div>
-            <div class="info-row"><strong>作業者:</strong> ${p.workerName || fd.workerName || '(未入力)'}</div>
+            ${address ? `<div class="info-row"><strong>住所:</strong> ${address} <a href="${mapUrl}" target="_blank" style="text-decoration:none; margin-left:5px; font-size:1.1rem;">📍</a></div>` : ''}
         `;
     } else {
+        const address = fd.address || '';
+        const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
         mainInfoHtml = `
             <div class="info-row"><strong>会社名:</strong> ${fd.companyName || '(未入力)'}</div>
             <div class="info-row"><strong>監督名:</strong> ${fd.supervisorName || '(未入力)'}</div>
+            ${address ? `<div class="info-row"><strong>住所:</strong> ${address} <a href="${mapUrl}" target="_blank" style="text-decoration:none; margin-left:5px; font-size:1.1rem;">📍</a></div>` : ''}
         `;
     }
 
     return `
         <div class="project-card fade-in ${isSelectionMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${p.id}" oncontextmenu="return false;">
-            <div class="project-card-body">
+            ${isSelectionMode ? `
+                <div class="card-selection-indicator selection-mode-active ${isSelected ? 'selected' : ''}">
+                    ${isSelected ? '✓' : ''}
+                </div>
+            ` : ''}
+            <div class="project-card-body" style="${isSelectionMode ? 'padding-left: 50px;' : ''}">
                 <div class="project-card-header">
                     <span class="project-type-tag ${p.type}">${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産報告書' : '完了報告書')}</span>
                     <span class="project-date">📅 ${dateStr}</span>
@@ -295,36 +278,67 @@ function renderProjectCardHtml(p, geppoLabels) {
 function bindCardEvents(container) {
     container.querySelectorAll('.project-card').forEach(card => {
         const id = card.dataset.id;
-        const start = () => {
-            isLongPressAction = false;
-            longPressTimeout = setTimeout(() => { isLongPressAction = true; enterSelectionMode(id); }, 700);
-        };
-        const end = () => clearTimeout(longPressTimeout);
-        const click = (e) => { 
-            if (isLongPressAction) return; 
+        card.addEventListener('click', (e) => { 
             if (isSelectionMode) {
                 toggleSelection(id); 
             } else {
                 if (e.target.closest('.card-action-btn')) return; 
                 window.handleCardPreview(id);
             }
-        };
-        card.addEventListener('touchstart', start, {passive: true});
-        card.addEventListener('touchend', end, {passive: true});
-        card.addEventListener('mousedown', start);
-        card.addEventListener('mouseup', end);
-        card.addEventListener('click', click);
+        });
     });
 }
 
-function enterSelectionMode(firstId) { isSelectionMode = true; selectedIds.add(firstId); renderList(); }
-function toggleSelection(id) { if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); if (selectedIds.size === 0) exitSelectionMode(); else renderList(); }
-function exitSelectionMode() { isSelectionMode = false; selectedIds.clear(); renderList(); }
+window.openReportModal = () => {
+    const modal = document.getElementById('report-modal');
+    if (modal) {
+        modal.classList.add('active');
+        modal.classList.remove('hidden');
+    }
+};
+
+window.enterSelectionMode = async (firstId) => {
+    isSelectionMode = true;
+    window.isSelectionMode = true; 
+    
+    if (firstId) selectedIds.add(firstId);
+    
+    const dockNormal = document.getElementById('dock-normal');
+    const dockSelection = document.getElementById('dock-selection');
+    if (dockNormal) dockNormal.style.display = 'none';
+    if (dockSelection) dockSelection.style.display = 'flex';
+    
+    window.updateBulkBar();
+    await renderList();
+};
+
+function toggleSelection(id) { 
+    console.log("Toggling Selection for:", id);
+    if (selectedIds.has(id)) selectedIds.delete(id); 
+    else selectedIds.add(id); 
+    window.updateBulkBar();
+    if (selectedIds.size === 0) window.exitSelectionMode(); 
+    else renderList(); 
+}
+
+window.exitSelectionMode = async () => {
+    isSelectionMode = false;
+    window.isSelectionMode = false;
+    selectedIds.clear();
+    
+    const dockNormal = document.getElementById('dock-normal');
+    const dockSelection = document.getElementById('dock-selection');
+    if (dockNormal) dockNormal.style.display = 'flex';
+    if (dockSelection) dockSelection.style.display = 'none';
+    
+    await renderList();
+};
 
 // --- Calendar Logic ---
 
-function renderCalendar(allProjects) {
-    const sentProjects = allProjects.filter(p => p.status === 'sent');
+async function renderCalendar() {
+    projects = await getAllProjects();
+    const sentProjects = projects.filter(p => p.status === 'sent');
     const container = els['calendar-view'];
     const header = document.getElementById('calendar-header');
     const grid = document.getElementById('calendar-grid');
@@ -375,17 +389,19 @@ window.selectCalendarDate = (date) => {
     renderList();
 };
 
-function renderCalendarDayList(sentProjects) {
+async function renderCalendarDayList() {
     const listContainer = document.getElementById('calendar-day-list');
     if (!selectedCalendarDate) {
         listContainer.innerHTML = '<p class="empty-state">日付を選択してください</p>';
         return;
     }
-
+    
+    projects = await getAllProjects();
+    const sentProjects = projects.filter(p => p.status === 'sent');
     let dayProjects = sentProjects.filter(p => p.date === selectedCalendarDate);
     
-    // Apply search filter even in calendar day list
-    dayProjects = filterBySearch(dayProjects, searchQuery);
+    // Sort by input date
+    dayProjects = dayProjects.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
     if (dayProjects.length === 0) {
         listContainer.innerHTML = `<p class="empty-state">${selectedCalendarDate} ${searchQuery ? 'の条件に合う' : ''}書類はありません</p>`;
@@ -396,13 +412,62 @@ function renderCalendarDayList(sentProjects) {
     const allSentProjects = sentProjects; // For labels
     const geppoLabels = generateGeppoLabels(allSentProjects);
     
-    listContainer.innerHTML = `<h4>${selectedCalendarDate} の書類 (${dayProjects.length}件)</h4>` + 
-        dayProjects.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
+    listContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding:10px; background:rgba(69, 26, 3, 0.05); border-radius:12px;">
+            <h4 style="margin:0;">${selectedCalendarDate} (${dayProjects.length}件)</h4>
+            ${isSelectionMode ? 
+                `<button class="btn btn-sm btn-danger" onclick="window.confirmDeleteSelected()">選択した${selectedIds.size}件を削除</button>` :
+                `<div style="font-size: 0.75rem; color: #9a3412; opacity: 0.8; font-weight: bold;">※長押しでまとめて削除</div>`
+            }
+        </div>
+    ` + dayProjects.map(p => renderProjectCardHtml(p, geppoLabels)).join('');
     
     bindCardEvents(listContainer);
 }
 
+window.enterSelectionModeFromCalendar = async () => {
+    isSelectionMode = true;
+    await renderCalendarDayList(); // FIX: Call specific calendar renderer, NOT renderList()
+    const bar = document.getElementById('bulk-action-bar');
+    if (bar) bar.classList.remove('hidden');
+    window.updateBulkBar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.updateBulkBar = () => {
+    const countEl = document.getElementById('selected-count');
+    if (countEl) countEl.textContent = selectedIds.size;
+    
+    const dockCountEl = document.getElementById('dock-count');
+    if (dockCountEl) dockCountEl.textContent = selectedIds.size;
+};
+
+window.confirmDeleteSelected = async () => {
+    if (selectedIds.size === 0) {
+        alert("削除する書類を選択してください");
+        return;
+    }
+    if (confirm(`選択した ${selectedIds.size} 件の書類を完全に削除しますか？`)) {
+        await Promise.all(Array.from(selectedIds).map(id => deleteProject(id)));
+        await exitSelectionMode();
+        alert('選択した書類をすべて削除しました');
+    }
+};
+
 // --- Preview & Action Logic ---
+
+window.showTypeModal = () => {
+    const modal = document.getElementById('type-modal');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.openReportModal = () => {
+    const modal = document.getElementById('report-modal');
+    if (modal) {
+        modal.classList.add('active');
+        modal.classList.remove('hidden');
+    }
+};
 
 window.handleCardPreview = async (id) => {
     const p = await getProject(id);
@@ -440,7 +505,7 @@ window.confirmGeneratePdf = (id) => {
         if (!name) { alert('氏名を入力してください'); return; }
         
         localStorage.setItem('last_user_name', name);
-        modal.classList.add('hidden');
+        modal.classList.remove('hidden');
         
         generatePdf(id, name, typeSelect.value);
     };
@@ -791,6 +856,15 @@ function bindGlobalEvents() {
         
         exitSelectionMode();
     });
+
+    // Search Input binding
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.oninput = async (e) => {
+            searchQuery = e.target.value;
+            await renderList();
+        };
+    }
 }
 
 function updateSelectionUI() {
@@ -841,12 +915,9 @@ async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
     if (!confirm(`${selectedIds.size}件の書類をすべて削除しますか？\nこの操作は取り消せません。`)) return;
     
-    for (const id of selectedIds) {
-        await deleteProject(id);
-    }
+    await Promise.all(Array.from(selectedIds).map(id => deleteProject(id)));
     
-    exitSelectionMode();
-    renderList();
+    await exitSelectionMode();
     alert('削除が完了しました');
 }
 
@@ -871,7 +942,7 @@ async function handleBulkPdf() {
         if (!name) { alert('氏名を入力してください'); return; }
         
         localStorage.setItem('last_user_name', name);
-        modal.classList.add('hidden');
+        modal.classList.remove('hidden');
         
         const ids = Array.from(selectedIds);
         const projects = [];
@@ -914,6 +985,8 @@ async function handleBulkPdf() {
 
 async function startScanner(file) {
     if (!file) return;
+    // CRITICAL: Sync data before UI re-render to prevent losing form input
+    syncDataToProject();
     const reader = new FileReader();
     reader.onload = (e) => {
         const originalDataUrl = e.target.result;
@@ -1048,11 +1121,15 @@ function showHealingDialog(customMsg = null) {
 }
 
 function bindReportEvents() {
-    const btnReport = document.getElementById('btn-report-issue');
+    const btnReport = document.getElementById('btn-report-issue-bot');
     if (btnReport) {
-        btnReport.onclick = () => {
+        const handleReport = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (els['report-modal']) els['report-modal'].classList.remove('hidden');
         };
+        btnReport.onclick = handleReport;
+        btnReport.addEventListener('touchstart', handleReport, {passive: false});
     }
     if (els['btn-report-cancel']) {
         els['btn-report-cancel'].onclick = () => {
@@ -1063,12 +1140,20 @@ function bindReportEvents() {
         els['btn-report-send'].onclick = () => {
             const text = els['report-text'].value.trim();
             if (!text) { alert('内容を入力してください'); return; }
-            if (confirm('この内容で作成者へ報告を送信しますか？')) {
-                console.log("Reporting to kmk7531.hmk.runner@gmail.com:", text);
-                alert('ありがとうございます。報告を受領しました。\n(※現在はシミュレーション送信です。実稼働にはバックエンド連携が必要です)');
-                els['report-text'].value = '';
-                els['report-modal'].classList.add('hidden');
-            }
+            
+            const subject = encodeURIComponent("【おやすみの宛先】不具合・要望報告");
+            const body = encodeURIComponent(text);
+            
+            const mailtoLink = `mailto:kmk7531.hmk.runner@gmail.com?subject=${subject}&body=${body}`;
+            const a = document.createElement('a');
+            a.href = mailtoLink;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            if (els['report-modal']) els['report-modal'].classList.add('hidden');
+            alert("メールアプリを起動しました。そのまま送信してください。");
         };
     }
 }
@@ -1130,7 +1215,21 @@ function bindBotEvents() {
 
     fabBot.onclick = (e) => {
         if (hasMoved) { e.preventDefault(); return; }
-        if (els['bot-container']) els['bot-container'].classList.toggle('hidden');
+        if (els['bot-container']) {
+            els['bot-container'].classList.toggle('hidden');
+            if (!els['bot-container'].classList.contains('hidden')) {
+                // Initial greeting
+                if (els['bot-messages'].children.length === 0) {
+                    addMessage('bot', `お疲れ様です！(INTERACTIVE版)<br>当社のルールや使い方をご案内します。ボタンを押してくださいね。<br><br>
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                            <button onclick="window.botAction('1')" style="padding: 10px; background: white; border: 1px solid var(--accent-gold); border-radius: 8px; color: #431407; font-weight: bold; cursor: pointer;">(1) 使い方</button>
+                            <button onclick="window.botAction('2')" style="padding: 10px; background: white; border: 1px solid var(--accent-gold); border-radius: 8px; color: #431407; font-weight: bold; cursor: pointer;">(2) 会社ルール</button>
+                            <button onclick="window.botAction('3')" style="padding: 10px; background: white; border: 1px solid var(--accent-gold); border-radius: 8px; color: #431407; font-weight: bold; cursor: pointer;">(3) 駐車場原本リスト</button>
+                            <button onclick="window.botAction('4')" style="padding: 12px; background: var(--accent-gold); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">📮 不具合報告・改善要望</button>
+                        </div>`);
+                }
+            }
+        }
     };
 
         if (els['btn-close-bot']) els['btn-close-bot'].onclick = () => els['bot-container'].classList.add('hidden');
@@ -1141,26 +1240,39 @@ function bindBotEvents() {
             addMessage('user', text);
             input.value = '';
 
-             const MANUAL = {
+            const lowerText = text.toLowerCase();
+            const normalizedText = lowerText.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            
+            if (normalizedText.includes('不具合') || normalizedText.includes('要望') || normalizedText === '4') {
+                window.openReportModal();
+                setTimeout(() => addMessage('bot', "不具合報告・要望フォームを開きました。ご協力ありがとうございます！"), 500);
+                return;
+            }
+
+            const MANUAL = {
                 "使い方": "はい、ご案内しますね。使い方はとってもシンプルですよ。\n1. 右下の「＋」ボタンから新しい書類（完了報告・丸産日報・月報）を作成できます。\n2. 作成したものは「下書き」に並びます。PDFにすると「完了」タブへお引越ししますよ。\n3. カレンダーから過去の書類を選んで「再編集」することもできますから、安心してくださいね。",
-                "PDF": "PDFの作成ですね。カードの「PDF」ボタンからひとつずつ作れるほか、長押しでいくつか選んでから下の「まとめてPDF」を押すと、一冊の書類にまとめることもできますよ。",
+                "pdf": "PDFの作成ですね。カードの「PDF」ボタンからひとつずつ作れるほか、長押しでいくつか選んでから下の「まとめてPDF」を押すと、一冊の書類にまとめることもできますよ。",
                 "削除": "書類の整理ですね。カードの「削除」ボタン、または長押しで選んでから「まとめて削除」が使えます。間違えて消さないように、確認のメッセージも出ますのでご安心ください。",
                 "編集": "下書きのものはそのまま「編集」から直せます。一度完了したものは、カレンダーから選んで「再編集」ボタンを押すと、また下書きに戻って修正できるようになりますよ。",
                 "検索": "画面の上の検索窓から、現場の名前や監督さんの名前で探せます。たくさんの記録の中から、すぐに見つけ出せますよ。",
+                "会社ルール": "会社ルールの何について聞きたいですか？\n(1) 丸産（山田/佐藤監督の書き方）\n(2) 駐車場（原本が必要な会社）\n(3) 旭化成（担当者リスト）\n番号かキーワードで話しかけてみてくださいね。",
+                "1": "丸産技研さんの大切なルールをお伝えしますね。\n・山田監督はフルネーム（正裕さん/拓実さん）で書き分けてくださいね。\n・佐藤監督は「ユタカ」さんか「ユウスケ」さんか、しっかり明記しましょう。\n・駐車場代は「材料費」の欄に記入する決まりになっていますよ。",
                 "丸産": "丸産技研さんの大切なルールをお伝えしますね。\n・山田監督はフルネーム（正裕さん/拓実さん）で書き分けてくださいね。\n・佐藤監督は「ユタカ」さんか「ユウスケ」さんか、しっかり明記しましょう。\n・駐車場代は「材料費」の欄に記入する決まりになっていますよ。",
-                "駐車場": "駐車場の領収書についてですね。\n・原本が必要な会社：埼玉美工、たまハウス、サートンホーム、東光建設、タカマツビルド、本橋工務店、サンキホーム、アイネックスの皆様です。\n・コピーでOKな会社：OTO、ユウキ建設、フォンテ、AHC、旭化成の皆様です。\n金額に関わらず、コピーは必ず添付してくださいね。原本は紛失に気をつけて、早めに事務の方へ届けてあげてください。",
-                "ルール": "社内の大切なルールについてお答えできます。「丸産」「駐車場」「旭化成」「必須項目」などのキーワードで話しかけてみてくださいね。今日もお疲れ様です。",
+                "2": "駐車場の領収書についてですね。\n・原本が必要：埼玉美工、たまハウス、サートンホーム、東光建設、タカマツビルド、本橋工務店、サンキホーム、アイネックスの皆様です。\n・コピーでOK：OTO、ユウキ建設、フォンテ、AHC、旭化成の皆様です。\n原本は紛失に気をつけて、早めに事務の方へ届けてあげてくださいね。",
+                "駐車場": "駐車場の領収書についてですね。\n・原本が必要：埼玉美工、たまハウス、サートンホーム、東光建設、タカマツビルド、本橋工務店、サンキホーム、アイネックスの皆様です。\n・コピーでOK：OTO、ユウキ建設、フォンテ、AHC、旭化成の皆様です。\n原本は紛失に気をつけて、早めに事務の方へ届けてあげてくださいね。",
+                "3": "旭化成グループの担当者様リストですね。\n・神奈川：後平様、磯前様、栗林様、阿部様...\n・中央：近藤様、笠松様、中山様、川口様...\n詳細はPDFのマスターナレッジにも詳しく載っていますので、迷ったら確認してみてくださいね。",
+                "旭化成": "旭化成グループの担当者様リストですね。\n・神奈川：後平様、磯前様、栗林様、阿部様...\n・中央：近藤様、笠松様、中山様、川口様...\n詳細はPDFのマスターナレッジにも詳しく載っていますので、迷ったら確認してみてくださいね。",
                 "必須": "報告書の共通ルールをお伝えしますね。\n1. 今日中に必ず送信しましょう。\n2. 高速代は漏れなく記入してくださいね。\n3. 材料（アルテコなど）は具体的に書きましょう。\n4. アクシアさんの現場は、金額と人工が必須ですよ。\n5. 注文番号も忘れずに記入しましょうね。",
-                "旭化成": "旭化成グループの担当者様リストですね。\n・神奈川：後平様、磯前様、栗林様、阿部様...など\n・中央：近藤様、笠松様、中山様、川口様...など\n詳細はPDFのマスターナレッジにも詳しく載っていますので、迷ったら確認してみてくださいね。",
                 "アクシア": "アクシアさんなどの現場ルールですね。注文書に金額が書いてある場合は、報告書の左下にもその金額を写してあげてください。右上の管理番号も忘れずに記入しましょうね。",
                 "ユウキ": "ユウキ建設さんの現場では、邸名を必ずフルネームで記入する決まりですよ。略さずに丁寧に書きましょうね。",
                 "シナネン": "シナネン（旧ミライフ）さんは、「シナネンアクシア」と「シナネン」を間違えないようにお気をつけくださいね。"
             };
 
             let found = false;
-            const lowerText = text.toLowerCase();
             for (let key in MANUAL) {
-                if (lowerText.includes(key.toLowerCase())) {
+                const lowerKey = key.toLowerCase();
+                // Match exactly the number if it's a numeric key, otherwise check includes
+                if ((lowerText === lowerKey) || (lowerKey.length > 1 && lowerText.includes(lowerKey))) {
                     setTimeout(() => addMessage('bot', MANUAL[key]), 500);
                     found = true;
                     break;
@@ -1173,9 +1285,24 @@ function bindBotEvents() {
     }
 }
 
+window.botAction = (cmd) => {
+    const input = els['bot-input'];
+    if (input) { 
+        input.value = cmd; 
+        if (els['btn-send-bot']) els['btn-send-bot'].click(); 
+    }
+};
+
 function addMessage(type, text) {
-    const div = document.createElement('div'); div.className = `message ${type}`; div.textContent = text;
-    if (els['bot-messages']) { els['bot-messages'].appendChild(div); els['bot-messages'].scrollTop = els['bot-messages'].scrollHeight; }
+    const div = document.createElement('div'); 
+    div.className = `message ${type}`; 
+    // Convert newlines to <br> if not HTML
+    const formattedText = text.includes('<') ? text : text.replace(/\n/g, '<br>');
+    div.innerHTML = formattedText;
+    if (els['bot-messages']) { 
+        els['bot-messages'].appendChild(div); 
+        els['bot-messages'].scrollTop = els['bot-messages'].scrollHeight; 
+    }
 }
 
 function handleReEditReceipt() {
@@ -1232,24 +1359,4 @@ window.copyFirstGeppoRow = () => {
     }
 };
 
-// --- Startup ---
-function initApp() {
-    console.log("Initializing Intelligent Workflow Build v34...");
-    cacheElements();
-    bindGlobalEvents();
-    bindReportEvents();
-    bindBotEvents();
-    renderList();
-    
-    // Switch to initial tab
-    window.switchTab('draft');
-}
-
-// Start the app
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
-}
-
-export { initApp };
+// End of app-v35.js

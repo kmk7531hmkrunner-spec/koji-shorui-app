@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>工事書類管理 - ULTRA MASTER v5.0</title>
+    
+    <!-- External Libraries (Standalone) -->
+    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd/idb-keyval-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        /* INLINED CORE CSS v5.0 */
+        :root {
+            --bg-dark: #fdfcf0; /* Warm stationery white */
+            --accent-gold: #d97706;
+            --primary: #92400e;
+            --text-primary: #451a03;
+            --text-secondary: #78350f;
+            --border-color: rgba(69, 26, 3, 0.1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            margin: 0; font-family: 'Inter', 'Noto Sans JP', sans-serif; 
+            background-color: var(--bg-dark); color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* REVOLUTION v5.0 - Body-State Architecture */
+        body[data-mode="selection"] .dock-normal { display: none !important; }
+        body[data-mode="selection"] .dock-selection { display: flex !important; }
+        body[data-mode="selection"] .card-selection-indicator { display: flex !important; }
+        body[data-mode="selection"] .project-card-body { padding-left: 50px !important; }
+
+        .app-header {
+            background: white; padding: 20px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: center; position: relative;
+        }
+
+        .report-btn {
+            position: absolute; right: 15px; top: 15px;
+            width: 44px; height: 44px; border-radius: 12px;
+            background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.1);
+            color: #dc2626; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; cursor: pointer; z-index: 1000; transition: all 0.2s;
+        }
+        .report-btn:active { transform: scale(0.9); background: rgba(220, 38, 38, 0.1); }
+
+        .tabs {
+            display: flex; margin: 15px; background: rgba(0,0,0,0.03);
+            padding: 5px; border-radius: 15px; gap: 5px;
+        }
+        .tab {
+            flex: 1; padding: 12px; text-align: center; border-radius: 12px;
+            font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .tab.active { background: white; color: var(--accent-gold); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        .project-list { padding: 15px; padding-bottom: 180px; }
+        .project-card {
+            background: white; border-radius: 20px; margin-bottom: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); position: relative;
+            display: flex; overflow: hidden; transition: 0.3s;
+        }
+        .project-card-body { flex: 1; padding: 20px; display: flex; flex-direction: column; }
+        .card-selection-indicator {
+            position: absolute; top: 15px; left: 10px; width: 28px; height: 28px;
+            border: 2px solid var(--accent-gold); border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            background: white; font-weight: bold; color: transparent;
+        }
+        .card-selection-indicator.active { background: var(--accent-gold); color: white; }
+
+        .sticky-bottom-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(255,255,255,0.98); backdrop-filter: blur(20px);
+            padding: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+            z-index: 10000; border-top: 1px solid var(--border-color);
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; z-index: 200000;
+        }
+        .modal-overlay.active { display: flex !important; }
+        .modal-content {
+            background: white; width: 90%; max-width: 450px; padding: 30px;
+            border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+
+        /* Essential Form Styles */
+        .form-view { background: white; min-height: 100vh; z-index: 15000; position: fixed; top: 0; left: 0; width: 100%; overflow-y: auto; }
+        .form-header { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 10; }
+        .btn-back-styled { width: 44px; height: 44px; border-radius: 12px; border: 1px solid #eee; background: none; font-size: 1.2rem; margin-right: 15px; }
+        .form-group { margin-bottom: 20px; }
+        .label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; color: #64748b; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 1rem; }
+        .btn { padding: 12px 20px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--accent-gold); color: white; }
+        .btn-danger { background: #fee2e2; color: #ef4444; }
+        .btn-outline { background: white; border: 1px solid #e2e8f0; }
+
+        .hidden { display: none !important; }
+        
+        /* Bot Bubble */
+        #fab-bot {
+            position: fixed; bottom: 100px; right: 20px; width: 56px; height: 56px;
+            border-radius: 28px; background: white; color: var(--accent-gold);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid var(--accent-gold);
+            display: flex; align-items: center; justify-content: center; z-index: 900;
+        }
+    </style>
+</head>
+<body data-mode="">
+    <div id="app">
+        <!-- System Banner -->
+        <div style="background: #ef4444; color: white; padding: 8px 15px; font-size: 12px; font-weight: bold; text-align: center; z-index: 100001; position: relative; letter-spacing: 1px;">
+            🚨 ULTRA-MASTER v5.0 STANDALONE LOADED 🚨
+        </div>
+
+        <header class="app-header">
+            <div style="font-family: 'Noto Serif JP', serif; font-size: 1.5rem; letter-spacing: 5px; color: var(--text-primary);">
+                おやすみの<span style="color:var(--accent-gold);">宛先</span>
+            </div>
+            <button class="report-btn" onclick="window.openReportModal()">📮</button>
+        </header>
+
+        <div id="search-container" style="padding: 15px;">
+            <input type="text" id="search-input" placeholder="現場名や会社名で検索..." style="background: white; border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+        </div>
+
+        <nav class="tabs">
+            <div class="tab active" data-tab="draft" onclick="window.switchTab('draft')">下書き</div>
+            <div class="tab" data-tab="sent" onclick="window.switchTab('sent')">完了・カレンダー</div>
+        </nav>
+
+        <div id="project-list-view" class="view-container">
+            <div style="padding: 0 15px;">
+                <button class="btn btn-primary" onclick="window.showTypeModal()" style="width: 100%; padding: 15px; font-size: 1.1rem; box-shadow: 0 10px 20px rgba(217,119,6,0.2);">
+                    ➕ 新規書類を作成
+                </button>
+            </div>
+            <div id="project-list" class="project-list"></div>
+        </div>
+
+        <!-- Standalone Bottom Dock -->
+        <div class="sticky-bottom-bar">
+            <div class="dock-normal" style="display: flex; justify-content: center;">
+                <button class="btn btn-primary" onclick="window.enterSelectionMode()" style="background: #0ea5e9; padding: 12px 60px; font-size: 1.1rem; box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);">
+                    複数選択
+                </button>
+            </div>
+            <div class="dock-selection hidden" style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                <div style="font-weight: bold; color: var(--accent-gold);"><span id="dock-count">0</span>件</div>
+                <div style="display: flex; gap: 8px; flex: 1; justify-content: flex-end;">
+                    <button class="btn btn-danger" onclick="window.confirmDeleteSelected()">🗑 削除</button>
+                    <button class="btn btn-primary" id="btn-bulk-pdf-exec" style="background: #0ea5e9; flex: 1;">📄 まとめてPDF</button>
+                    <button class="btn btn-outline" onclick="window.exitSelectionMode()">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bot -->
+        <button id="fab-bot" onclick="window.toggleBot()">💬</button>
+        <div id="bot-container" class="modal-overlay hidden" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-content" style="max-width: 350px; height: 450px; padding: 0; display: flex; flex-direction: column;">
+                <div style="background: var(--accent-gold); color: white; padding: 15px; display: flex; justify-content: space-between; border-radius: 24px 24px 0 0;">
+                    <b>案内人</b>
+                    <span onclick="window.toggleBot()" style="cursor:pointer;">✕</span>
+                </div>
+                <div id="bot-messages" style="flex: 1; overflow-y: auto; padding: 15px;"></div>
+                <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 5px;">
+                    <input type="text" id="bot-input" placeholder="質問を入力..." style="flex:1;">
+                    <button onclick="window.sendBotMessage()" class="btn btn-primary" style="padding: 10px;">送信</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="report-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>📭 不具合・要望の報告</h3>
+                <textarea id="report-text" rows="6" style="margin-bottom: 20px;" placeholder="不具合の内容や、こうなったら便利！という要望を教えてください。"></textarea>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-outline" onclick="window.closeReportModal()" style="flex:1;">キャンセル</button>
+                    <button class="btn btn-primary" id="btn-report-send" style="flex:1;">報告を送信</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="type-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 style="margin-bottom: 25px;">作成する書類を選択</h2>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button class="btn btn-primary" onclick="window.createNewProject('kanryo')">完了報告書</button>
+                    <button class="btn btn-primary" onclick="window.createNewProject('marusan')">丸産技研報告書</button>
+                    <button class="btn btn-primary" onclick="window.createNewProject('geppo')">月報</button>
+                    <button class="btn btn-outline" onclick="window.closeTypeModal()" style="margin-top: 15px;">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form View (Full Screen) -->
+        <div id="form-view" class="form-view hidden">
+            <header class="form-header">
+                <button class="btn-back-styled" onclick="window.closeForm()">✕</button>
+                <h1 id="form-title" style="margin:0; font-size: 1.1rem;">新規作成</h1>
+            </header>
+            <div id="editor-container" style="padding: 20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        /* STANDALONE ENGINE v5.0 */
+        const { get, set, del, keys } = idbKeyval;
+        const { jsPDF } = window.jspdf;
+
+        // --- State ---
+        let currentTab = 'draft';
+        let isSelectionMode = false;
+        let selectedIds = new Set();
+        let projects = [];
+        let currentProject = null;
+
+        // --- Boot ---
+        window.onload = async () => {
+            console.log("Ultra-Master Engine Booting...");
+            await renderList();
+            setupBot();
+        };
+
+        // --- Core Logic ---
+        async function getAllProjects() {
+            const allKeys = await keys();
+            const list = [];
+            for (const key of allKeys) {
+                if (String(key).startsWith('project_')) {
+                    const p = await get(key);
+                    if (p) list.push(p);
+                }
+            }
+            return list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        }
+
+        async function renderList() {
+            const listContainer = document.getElementById('project-list');
+            projects = await getAllProjects();
+            
+            let filtered = projects.filter(p => p.status === (currentTab === 'draft' ? 'draft' : 'sent'));
+            
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<div style="text-align:center; padding:50px; color:#94a3b8;">書類がありません</div>';
+                return;
+            }
+
+            listContainer.innerHTML = filtered.map(p => `
+                <div class="project-card ${selectedIds.has(p.id) ? 'selected' : ''}" onclick="window.handleCardClick('${p.id}')">
+                    <div class="card-selection-indicator ${selectedIds.has(p.id) ? 'active' : ''}">✓</div>
+                    <div class="project-card-body">
+                        <div style="font-size: 0.75rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 5px;">
+                            ${p.type === 'geppo' ? '月報' : (p.type === 'marusan' ? '丸産' : '完了')}
+                        </div>
+                        <div style="font-weight: bold; font-size: 1.1rem;">${p.displayTitle || '名称未設定'}</div>
+                        <div style="font-size: 0.85rem; color: #64748b; margin-top: 5px;">${p.date || ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.switchTab = (tab) => {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            renderList();
+        };
+
+        window.handleCardClick = (id) => {
+            if (isSelectionMode) {
+                if (selectedIds.has(id)) selectedIds.delete(id);
+                else selectedIds.add(id);
+                updateSelectionUI();
+                renderList();
+            } else {
+                window.editProject(id);
+            }
+        };
+
+        window.enterSelectionMode = () => {
+            isSelectionMode = true;
+            document.body.dataset.mode = 'selection';
+            document.querySelector('.dock-selection').classList.remove('hidden');
+            renderList();
+        };
+
+        window.exitSelectionMode = () => {
+            isSelectionMode = false;
+            document.body.dataset.mode = '';
+            selectedIds.clear();
+            document.querySelector('.dock-selection').classList.add('hidden');
+            renderList();
+        };
+
+        function updateSelectionUI() {
+            document.getElementById('dock-count').textContent = selectedIds.size;
+        }
+
+        // --- Modals ---
+        window.openReportModal = () => document.getElementById('report-modal').classList.add('active');
+        window.closeReportModal = () => document.getElementById('report-modal').classList.remove('active');
+        window.showTypeModal = () => document.getElementById('type-modal').classList.add('active');
+        window.closeTypeModal = () => document.getElementById('type-modal').classList.remove('active');
+
+        // --- Bot ---
+        function setupBot() {
+            const container = document.getElementById('bot-messages');
+            container.innerHTML = `<div style="background:#f1f5f9; padding:10px; border-radius:10px; margin-bottom:10px; font-size:0.9rem;">
+                <b>案内人:</b> お疲れ様です！(v5.0)<br>
+                (1) 使い方<br>
+                (2) 会社ルール<br>
+                (3) 駐車場原本<br>
+                (4) 📮不具合報告・要望
+            </div>`;
+        }
+        window.toggleBot = () => document.getElementById('bot-container').classList.toggle('hidden');
+        window.sendBotMessage = () => {
+            const input = document.getElementById('bot-input');
+            const val = input.value.trim();
+            if (val === '4') {
+                window.toggleBot();
+                window.openReportModal();
+            }
+            input.value = '';
+        };
+
+        // --- Reporting ---
+        document.getElementById('btn-report-send').onclick = () => {
+            const text = document.getElementById('report-text').value;
+            if (!text) return alert("内容を入力してください");
+            const subject = encodeURIComponent("【現場書類アプリ】不具合・要望報告");
+            const body = encodeURIComponent(text + "\n\n--- Debug Info ---\nApp Version: v5.0-Standalone\nDate: " + new Date().toLocaleString());
+            window.location.href = `mailto:your-email@example.com?subject=${subject}&body=${body}`;
+            window.closeReportModal();
+        };
+
+        // --- Project Actions ---
+        window.createNewProject = (type) => {
+            currentProject = {
+                id: 'project_' + Date.now(),
+                type: type,
+                status: 'draft',
+                date: new Date().toISOString().split('T')[0],
+                formData: {},
+                updatedAt: Date.now()
+            };
+            window.closeTypeModal();
+            showForm();
+        };
+
+        window.editProject = async (id) => {
+            currentProject = await get(id);
+            showForm();
+        };
+
+        function showForm() {
+            document.getElementById('form-view').classList.remove('hidden');
+            const container = document.getElementById('editor-container');
+            container.innerHTML = `
+                <div class="form-group">
+                    <label class="label">日付</label>
+                    <input type="date" id="f-date" value="${currentProject.date}">
+                </div>
+                <div class="form-group">
+                    <label class="label">現場名/会社名</label>
+                    <input type="text" id="f-title" value="${currentProject.displayTitle || ''}" placeholder="例：〇〇邸 / 〇〇建設">
+                </div>
+                <div style="display:flex; gap:10px; margin-top:30px;">
+                    <button class="btn btn-outline" onclick="window.closeForm()" style="flex:1;">キャンセル</button>
+                    <button class="btn btn-primary" onclick="window.saveCurrentProject()" style="flex:1;">保存する</button>
+                </div>
+            `;
+        }
+
+        window.closeForm = () => {
+            if (confirm("変更を破棄して戻りますか？")) {
+                document.getElementById('form-view').classList.add('hidden');
+            }
+        };
+
+        window.saveCurrentProject = async () => {
+            currentProject.date = document.getElementById('f-date').value;
+            currentProject.displayTitle = document.getElementById('f-title').value;
+            currentProject.updatedAt = Date.now();
+            await set(currentProject.id, currentProject);
+            document.getElementById('form-view').classList.add('hidden');
+            renderList();
+        };
+
+        window.confirmDeleteSelected = async () => {
+            if (confirm(`${selectedIds.size}件の書類を削除しますか？`)) {
+                for (const id of selectedIds) await del(id);
+                window.exitSelectionMode();
+            }
+        };
+    </script>
+</body>
+</html>
