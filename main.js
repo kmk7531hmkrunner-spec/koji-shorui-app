@@ -302,12 +302,12 @@ window.updateSelectionUI = () => {
         document.body.classList.add('selection-mode');
         container.innerHTML = `
             <div style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px); padding: 18px; border-radius: 24px; box-shadow: 0 10px 50px rgba(0,0,0,0.25); display: flex; gap: 12px; align-items: center; width: 92%; max-width: 480px; border: 1px solid rgba(0,0,0,0.1); animation: slideUp 0.3s ease-out; pointer-events: auto;">
+                <button class="btn btn-outline" onclick="window.exitSelectionMode()" style="padding: 12px 18px; border-radius: 12px;">✕</button>
                 <div style="font-size: 1rem; font-weight: bold; color: var(--accent-gold); min-width: 40px; text-align: center;">
                     <span id="dock-count" style="font-size: 1.2rem;">${selectedIds.size}</span>件
                 </div>
-                <button class="btn btn-danger" onclick="window.handleBulkDelete()" style="flex: 1; font-weight: bold; padding: 12px 5px; font-size: 0.9rem;">まとめて削除</button>
                 <button class="btn btn-primary" onclick="window.handleBulkPdf()" style="flex: 1.5; font-weight: bold; padding: 12px 5px; font-size: 0.9rem; background: #0ea5e9; border:none;">まとめてPDF</button>
-                <button class="btn btn-outline" onclick="window.exitSelectionMode()" style="padding: 12px 18px; border-radius: 12px;">✕</button>
+                <button class="btn btn-danger" onclick="window.handleBulkDelete()" style="flex: 1; font-weight: bold; padding: 12px 5px; font-size: 0.9rem;">まとめて削除</button>
             </div>
         `;
     }
@@ -321,7 +321,8 @@ window.toggleSelection = (id) => {
     // Visually update ONLY the clicked card for maximum performance
     const card = document.querySelector(`.project-card[data-id="${id}"]`);
     if (card) {
-        card.classList.toggle('selected');
+        if (selectedIds.has(id)) card.classList.add('selected');
+        else card.classList.remove('selected');
     }
 };
 
